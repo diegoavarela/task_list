@@ -6,6 +6,7 @@ import { TaskList } from './components/tasks/TaskList';
 import { CompanyConfig } from './components/company/CompanyConfig';
 import { Layout } from './components/layout/Layout';
 import { saveTasks, loadTasks, saveCompanies, loadCompanies } from './lib/storage';
+import { Toaster } from "@/components/ui/toaster"
 
 type Page = 'tasks' | 'companies';
 
@@ -25,11 +26,9 @@ export function App() {
       setTasks(loadedTasks.map(task => ({
         ...task,
         createdAt: new Date(task.createdAt),
-        deadline: task.deadline ? new Date(task.deadline) : undefined,
         subtasks: task.subtasks.map(subtask => ({
           ...subtask,
           createdAt: new Date(subtask.createdAt),
-          deadline: subtask.deadline ? new Date(subtask.deadline) : undefined,
           subtasks: []
         }))
       })));
@@ -82,36 +81,40 @@ export function App() {
     ));
   };
 
+  const handleUpdateCompany = (updatedCompany: Company) => {
+    setCompanies(companies.map(company => 
+      company.id === updatedCompany.id ? updatedCompany : company
+    ));
+  };
+
   return (
-    <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
-      <div className="space-y-4">
-        {saveError && (
-          <div className="card bg-destructive/10 text-destructive p-4">
-            <p>{saveError}</p>
-          </div>
-        )}
-        <div className="flex justify-end">
-          <button onClick={handleSave} className="btn btn-primary">
-            <Save className="h-4 w-4 mr-2" />
-            Save Changes
-          </button>
+    <>
+      <Layout 
+        currentPage={currentPage} 
+        onPageChange={setCurrentPage}
+        onSave={handleSave}
+        saveError={saveError}
+      >
+        <div className="space-y-4">
+          {currentPage === 'tasks' ? (
+            <TaskList
+              tasks={tasks}
+              companies={companies}
+              onAddTask={handleAddTask}
+              onUpdateTask={handleUpdateTask}
+              onDeleteTask={handleDeleteTask}
+            />
+          ) : (
+            <CompanyConfig
+              companies={companies}
+              onAddCompany={handleAddCompany}
+              onUpdateCompany={handleUpdateCompany}
+              onDeleteCompany={handleDeleteCompany}
+            />
+          )}
         </div>
-        {currentPage === 'tasks' ? (
-          <TaskList
-            tasks={tasks}
-            companies={companies}
-            onAddTask={handleAddTask}
-            onUpdateTask={handleUpdateTask}
-            onDeleteTask={handleDeleteTask}
-          />
-        ) : (
-          <CompanyConfig
-            companies={companies}
-            onAddCompany={handleAddCompany}
-            onDeleteCompany={handleDeleteCompany}
-          />
-        )}
-      </div>
-    </Layout>
+      </Layout>
+      <Toaster />
+    </>
   );
 }

@@ -1,8 +1,164 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .company-list {
+    @apply space-y-4;
+  }
+
+  .company-item {
+    @apply flex items-center justify-between p-4 rounded-lg border bg-white shadow-sm transition-all duration-200;
+  }
+
+  .company-item:hover {
+    @apply shadow-md border-primary/20;
+  }
+
+  .company-text {
+    @apply text-sm font-medium transition-colors duration-200;
+  }
+
+  .company-item:hover .company-text {
+    @apply text-primary;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply bg-transparent text-primary border-2 border-primary hover:bg-primary/5;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-primary border-2 border-primary hover:bg-primary/5;
+  }
+
+  .btn-ghost .lucide-trash-2 {
+    @apply w-4 h-4 text-destructive;
+  }
+
+  .btn-ghost:hover .lucide-trash-2 {
+    @apply text-destructive/80;
+  }
+
+  button.btn-ghost[aria-label="Delete"] {
+    @apply border-none p-0 bg-transparent shadow-none;
+  }
+
+  button.btn-ghost[aria-label="Delete"]:hover {
+    @apply border-none bg-transparent shadow-none;
+  }
+
+  .card {
+    @apply rounded-lg border bg-white shadow-sm;
+  }
+
+  .card-header {
+    @apply flex flex-col space-y-1.5 p-6;
+  }
+
+  .card-title {
+    @apply text-2xl font-semibold leading-none tracking-tight;
+  }
+
+  .input {
+    @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-sm {
+    @apply h-9 px-3;
+  }
+
+  .checkbox {
+    @apply h-4 w-4 rounded border border-primary text-primary focus:ring-primary;
+  }
+
+  .task-list {
+    @apply space-y-2;
+  }
+
+  .task-item {
+    @apply flex items-center justify-between p-4 bg-card rounded-lg border;
+  }
+
+  .task-text {
+    @apply text-sm;
+  }
+
+  .empty-state {
+    @apply flex flex-col items-center justify-center p-8 text-center;
+  }
+
+  .empty-state-title {
+    @apply text-lg font-semibold text-muted-foreground;
+  }
+
+  .empty-state-description {
+    @apply text-sm text-muted-foreground mt-2;
+  }
+}
+
 /* Remove Tailwind imports and use our custom CSS */
 :root {
   /* Colors */
-  --background: #f8fafc;
-  --foreground: #0f172a;
   --primary: #3b82f6;
   --primary-foreground: #ffffff;
   --primary-hover: #2563eb;
@@ -70,6 +226,10 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--foreground);
 }
 
 html, body {
@@ -77,10 +237,6 @@ html, body {
   padding: 0;
   min-height: 100vh;
   background-color: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-  line-height: var(--line-height-normal);
-  font-weight: var(--font-weight-normal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -217,16 +373,6 @@ nav {
   outline-offset: 2px;
 }
 
-.btn-primary {
-  background: var(--primary);
-  color: var(--primary-foreground);
-}
-
-.btn-primary:hover {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
-}
-
 .btn-secondary {
   background: var(--secondary);
   color: var(--secondary-foreground);
@@ -245,16 +391,6 @@ nav {
 .btn-destructive:hover {
   background: var(--destructive-hover);
   transform: translateY(-1px);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--muted-foreground);
-}
-
-.btn-ghost:hover {
-  background: var(--muted);
-  color: var(--foreground);
 }
 
 /* Inputs */
@@ -332,8 +468,7 @@ nav {
 
 .task-text {
   flex: 1;
-  font-size: var(--font-size-sm);
-  color: var(--foreground);
+  margin: 0;
 }
 
 .task-item.completed .task-text {

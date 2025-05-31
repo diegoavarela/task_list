@@ -1,302 +1,299 @@
 import { useState } from 'react';
-import { PlusCircle, Trash2, CheckCircle2, Edit2, Filter, X } from 'lucide-react';
+import { Plus, Trash2, Edit2, CheckCircle2, Circle, ChevronDown, ChevronRight, Building2, Calendar } from 'lucide-react';
 import type { Task } from '../../types/task';
 import type { Company } from '../../types/company';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useToast } from '@/components/ui/use-toast';
+import { format } from 'date-fns';
 
 interface TaskListProps {
   tasks: Task[];
   companies: Company[];
-  onAddTask: (task: Task) => void;
-  onUpdateTask: (task: Task) => void;
+  onAddTask: (name: string, companyId: string) => void;
+  onEditTask: (taskId: string, name: string) => void;
   onDeleteTask: (taskId: string) => void;
+  onAddCompany: (name: string) => void;
+  onEditCompany: (companyId: string, name: string) => void;
+  onDeleteCompany: (companyId: string) => void;
 }
 
-export function TaskList({ tasks, companies, onAddTask, onUpdateTask, onDeleteTask }: TaskListProps) {
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskDescription, setNewTaskDescription] = useState('');
-  const [deadline, setDeadline] = useState('');
-  const [companyId, setCompanyId] = useState<string>('');
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editingTitle, setEditingTitle] = useState('');
-  const [editingDescription, setEditingDescription] = useState('');
-  const [showAddTask, setShowAddTask] = useState(false);
-  const [filterCompany, setFilterCompany] = useState<string>('');
-  const [showCompleted, setShowCompleted] = useState(true);
+export function TaskList({
+  tasks,
+  companies,
+  onAddTask,
+  onEditTask,
+  onDeleteTask,
+  onAddCompany,
+  onEditCompany,
+  onDeleteCompany,
+}: TaskListProps) {
+  const [newTaskName, setNewTaskName] = useState('');
+  const [newTaskCompany, setNewTaskCompany] = useState('');
+  const [newCompanyName, setNewCompanyName] = useState('');
+  const [editingTask, setEditingTask] = useState<{ id: string; name: string } | null>(null);
+  const [editingCompany, setEditingCompany] = useState<{ id: string; name: string } | null>(null);
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleAddTask = () => {
-    if (newTaskTitle.trim()) {
-      onAddTask({
-        id: Date.now().toString(),
-        title: newTaskTitle.trim(),
-        description: newTaskDescription.trim() || undefined,
-        completed: false,
-        createdAt: new Date(),
-        companyId: companyId || '',
-        deadline: deadline ? new Date(deadline) : undefined,
-        subtasks: []
+    if (newTaskName.trim() && newTaskCompany) {
+      onAddTask(newTaskName.trim(), newTaskCompany);
+      setNewTaskName('');
+      setNewTaskCompany('');
+      toast({
+        title: "Task added",
+        description: "Your task has been added successfully.",
       });
-      setNewTaskTitle('');
-      setNewTaskDescription('');
-      setDeadline('');
-      setCompanyId('');
-      setShowAddTask(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleAddTask();
+  const handleAddCompany = () => {
+    if (newCompanyName.trim()) {
+      onAddCompany(newCompanyName.trim());
+      setNewCompanyName('');
+      toast({
+        title: "Company added",
+        description: "Your company has been added successfully.",
+      });
     }
+  };
+
+  const handleEditTask = () => {
+    if (editingTask && editingTask.name.trim()) {
+      onEditTask(editingTask.id, editingTask.name.trim());
+      setEditingTask(null);
+      toast({
+        title: "Task updated",
+        description: "Your task has been updated successfully.",
+      });
+    }
+  };
+
+  const handleEditCompany = () => {
+    if (editingCompany && editingCompany.name.trim()) {
+      onEditCompany(editingCompany.id, editingCompany.name.trim());
+      setEditingCompany(null);
+      toast({
+        title: "Company updated",
+        description: "Your company has been updated successfully.",
+      });
+    }
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    setTaskToDelete(taskId);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteTask = () => {
+    if (taskToDelete) {
+      onDeleteTask(taskToDelete);
+      setDeleteDialogOpen(false);
+      setTaskToDelete(null);
+      toast({
+        title: "Task deleted",
+        description: "Your task has been deleted successfully.",
+      });
+    }
+  };
+
+  const toggleTask = (taskId: string) => {
+    const newExpanded = new Set(expandedTasks);
+    if (newExpanded.has(taskId)) {
+      newExpanded.delete(taskId);
+    } else {
+      newExpanded.add(taskId);
+    }
+    setExpandedTasks(newExpanded);
   };
 
   const getCompanyName = (companyId: string) => {
-    if (!companyId) return null;
-    const company = companies.find(c => c.id === companyId);
-    return company?.name;
+    return companies.find(c => c.id === companyId)?.name || 'Unknown Company';
   };
-
-  const handleTaskClick = (task: Task) => {
-    setEditingTaskId(task.id);
-    setEditingTitle(task.title);
-    setEditingDescription(task.description || '');
-  };
-
-  const handleTaskEdit = (task: Task) => {
-    onUpdateTask({
-      ...task,
-      title: editingTitle.trim(),
-      description: editingDescription.trim() || undefined
-    });
-    setEditingTaskId(null);
-  };
-
-  const handleEditKeyPress = (e: React.KeyboardEvent, task: Task) => {
-    if (e.key === 'Enter') {
-      handleTaskEdit(task);
-    } else if (e.key === 'Escape') {
-      setEditingTaskId(null);
-    }
-  };
-
-  const filteredTasks = tasks.filter(task => {
-    if (!showCompleted && task.completed) return false;
-    if (filterCompany && task.companyId !== filterCompany) return false;
-    return true;
-  });
 
   return (
-    <div className="space-y-4">
-      {/* Filters */}
-      <div className="card p-4">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4" />
+    <div className="space-y-8">
+      <Card>
+        <CardHeader>
+          <CardTitle>Add New Task</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4">
+            <Input
+              placeholder="Task name"
+              value={newTaskName}
+              onChange={(e) => setNewTaskName(e.target.value)}
+              className="flex-1"
+            />
             <select
-              value={filterCompany}
-              onChange={(e) => setFilterCompany(e.target.value)}
-              className="input min-w-[200px]"
+              value={newTaskCompany}
+              onChange={(e) => setNewTaskCompany(e.target.value)}
+              className="flex h-10 w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-              <option value="">All Companies</option>
-              {companies.map(company => (
+              <option value="">Select company</option>
+              {companies.map((company) => (
                 <option key={company.id} value={company.id}>
                   {company.name}
                 </option>
               ))}
             </select>
+            <Button onClick={handleAddTask} className="border-2 border-violet-500 text-violet-500 hover:bg-violet-500 hover:text-white">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Task
+            </Button>
           </div>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={showCompleted}
-              onChange={(e) => setShowCompleted(e.target.checked)}
-              className="checkbox"
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Add New Company</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4">
+            <Input
+              placeholder="Company name"
+              value={newCompanyName}
+              onChange={(e) => setNewCompanyName(e.target.value)}
+              className="flex-1"
             />
-            Show Completed
-          </label>
-          {filterCompany && (
-            <button
-              onClick={() => setFilterCompany('')}
-              className="btn btn-ghost btn-sm"
-            >
-              <X className="h-4 w-4" />
-              Clear Filter
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Task List */}
-      <div className="space-y-2">
-        {filteredTasks.length === 0 ? (
-          <div className="card empty-state">
-            <h3 className="empty-state-title">No tasks found</h3>
-            <p className="empty-state-description">
-              {filterCompany ? 'Try changing your filters' : 'Add a task to get started!'}
-            </p>
+            <Button onClick={handleAddCompany} className="border-2 border-violet-500 text-violet-500 hover:bg-violet-500 hover:text-white">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Company
+            </Button>
           </div>
-        ) : (
-          <div className="task-list">
-            {filteredTasks.map(task => (
-              <div
-                key={task.id}
-                className={`task-item ${task.completed ? 'completed' : ''}`}
-              >
-                <div className="flex items-center gap-4 flex-1">
-                  <input
-                    type="checkbox"
-                    checked={task.completed}
-                    onChange={() => onUpdateTask({ ...task, completed: !task.completed })}
-                    className="checkbox"
-                  />
-                  <div className="flex-1">
-                    {editingTaskId === task.id ? (
-                      <div className="space-y-4">
-                        <div className="flex flex-col gap-2">
-                          <label className="text-sm font-medium">Title</label>
-                          <input
-                            type="text"
-                            value={editingTitle}
-                            onChange={(e) => setEditingTitle(e.target.value)}
-                            onKeyDown={(e) => handleEditKeyPress(e, task)}
-                            className="input"
-                            autoFocus
-                          />
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <label className="text-sm font-medium">Description</label>
-                          <textarea
-                            value={editingDescription}
-                            onChange={(e) => setEditingDescription(e.target.value)}
-                            onKeyDown={(e) => handleEditKeyPress(e, task)}
-                            className="input min-h-[100px] resize-y"
-                            placeholder="Task description (optional)"
-                          />
-                        </div>
-                        <div className="flex gap-2 justify-end">
-                          <button
-                            onClick={() => setEditingTaskId(null)}
-                            className="btn btn-ghost btn-sm"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() => handleTaskEdit(task)}
-                            className="btn btn-primary btn-sm"
-                          >
-                            Save Changes
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div onClick={() => handleTaskClick(task)} className="cursor-pointer">
-                        <span className="task-text">
-                          {task.title}
-                        </span>
-                        {task.description && (
-                          <p className="task-text text-muted-foreground">{task.description}</p>
-                        )}
-                        <div className="flex gap-2 text-sm text-muted-foreground">
-                          {task.companyId && (
-                            <span>Company: {getCompanyName(task.companyId)}</span>
-                          )}
-                          {task.deadline && (
-                            <span>Due: {task.deadline.toLocaleDateString()}</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {task.completed && (
-                    <CheckCircle2 className="h-4 w-4 text-success" />
-                  )}
-                  <button
-                    onClick={() => onDeleteTask(task.id)}
-                    className="btn btn-ghost"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Add Task Button */}
-      <div className="flex justify-center">
-        <button
-          onClick={() => setShowAddTask(true)}
-          className="btn btn-primary"
-        >
-          <PlusCircle className="h-4 w-4 mr-2" />
-          Add New Task
-        </button>
-      </div>
-
-      {/* Add Task Dialog */}
-      {showAddTask && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
-          <div className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-full max-w-lg">
-            <div className="card">
-              <div className="card-header">
-                <h2 className="card-title">Add New Task</h2>
+      <div className="space-y-4">
+        {tasks.map((task) => (
+          <div key={task.id} className="rounded-lg border bg-card">
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setShowAddTask(false)}
-                  className="btn btn-ghost btn-sm"
+                  onClick={() => toggleTask(task.id)}
+                  className="p-1 hover:bg-accent rounded-md"
                 >
-                  <X className="h-4 w-4" />
+                  {expandedTasks.has(task.id) ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
                 </button>
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">{getCompanyName(task.companyId)}</span>
+                  <span className="text-muted-foreground">•</span>
+                  <span>{task.name}</span>
+                </div>
               </div>
-              <div className="space-y-4 p-4">
-                <div className="flex gap-4">
-                  <input
-                    type="text"
-                    value={newTaskTitle}
-                    onChange={(e) => setNewTaskTitle(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Task title"
-                    className="input flex-1"
-                  />
-                  <button onClick={handleAddTask} className="btn btn-primary">
-                    <PlusCircle className="h-4 w-4" />
-                    Add Task
-                  </button>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  {format(new Date(task.createdAt), 'MMM d, yyyy')}
                 </div>
-                <div className="flex flex-col gap-4">
-                  <textarea
-                    value={newTaskDescription}
-                    onChange={(e) => setNewTaskDescription(e.target.value)}
-                    placeholder="Task description (optional)"
-                    className="input min-h-[100px] resize-y"
-                  />
-                  <div className="flex gap-4">
-                    <select
-                      value={companyId}
-                      onChange={(e) => setCompanyId(e.target.value)}
-                      className="input min-w-[200px]"
-                    >
-                      <option value="">Select Company</option>
-                      {companies.map(company => (
-                        <option key={company.id} value={company.id}>
-                          {company.name}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="date"
-                      value={deadline}
-                      onChange={(e) => setDeadline(e.target.value)}
-                      className="input"
-                    />
-                  </div>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setEditingTask({ id: task.id, name: task.name })}
+                >
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDeleteTask(task.id)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
               </div>
             </div>
+            {expandedTasks.has(task.id) && task.subtasks.length > 0 && (
+              <div className="border-t p-4">
+                <div className="space-y-2">
+                  {task.subtasks.map((subtask) => (
+                    <div key={subtask.id} className="flex items-center justify-between pl-8">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{getCompanyName(subtask.companyId)}</span>
+                        <span className="text-muted-foreground">•</span>
+                        <span>{subtask.name}</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          {format(new Date(subtask.createdAt), 'MMM d, yyyy')}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setEditingTask({ id: subtask.id, name: subtask.name })}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteTask(subtask.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        ))}
+      </div>
+
+      <Dialog open={!!editingTask} onOpenChange={() => setEditingTask(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={editingTask?.name || ''}
+              onChange={(e) => setEditingTask(prev => prev ? { ...prev, name: e.target.value } : null)}
+              placeholder="Task name"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingTask(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditTask}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Task</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this task? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteTask}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 
