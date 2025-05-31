@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-type Page = 'tasks' | 'company';
+type Page = 'tasks' | 'companies';
 
 interface LayoutProps {
   children: ReactNode
@@ -24,10 +24,10 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
               Tasks
             </button>
             <button
-              className={`nav-link ${currentPage === 'company' ? 'active' : ''}`}
-              onClick={() => onPageChange('company')}
+              className={`nav-link ${currentPage === 'companies' ? 'active' : ''}`}
+              onClick={() => onPageChange('companies')}
             >
-              Company
+              Companies
             </button>
           </nav>
         </div>

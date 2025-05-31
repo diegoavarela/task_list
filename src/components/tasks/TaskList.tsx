@@ -1,19 +1,7 @@
 import { useState } from 'react';
 import { PlusCircle, Trash2, CheckCircle2 } from 'lucide-react';
-
-interface Company {
-  id: string;
-  name: string;
-}
-
-interface Task {
-  id: string;
-  text: string;
-  completed: boolean;
-  companyId?: string;
-  dueDate?: string;
-  priority?: 'low' | 'medium' | 'high';
-}
+import type { Task } from '../../types/task';
+import type { Company } from '../../types/company';
 
 interface TaskListProps {
   tasks: Task[];
@@ -24,24 +12,26 @@ interface TaskListProps {
 }
 
 export function TaskList({ tasks, companies, onAddTask, onUpdateTask, onDeleteTask }: TaskListProps) {
-  const [newTask, setNewTask] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskDescription, setNewTaskDescription] = useState('');
+  const [deadline, setDeadline] = useState('');
   const [companyId, setCompanyId] = useState<string>('');
 
   const handleAddTask = () => {
-    if (newTask.trim()) {
+    if (newTaskTitle.trim()) {
       onAddTask({
         id: Date.now().toString(),
-        text: newTask.trim(),
+        title: newTaskTitle.trim(),
+        description: newTaskDescription.trim() || undefined,
         completed: false,
-        companyId: companyId || undefined,
-        dueDate: dueDate || undefined,
-        priority
+        createdAt: new Date(),
+        companyId: companyId || '',
+        deadline: deadline ? new Date(deadline) : undefined,
+        subtasks: []
       });
-      setNewTask('');
-      setDueDate('');
-      setPriority('medium');
+      setNewTaskTitle('');
+      setNewTaskDescription('');
+      setDeadline('');
       setCompanyId('');
     }
   };
@@ -52,20 +42,7 @@ export function TaskList({ tasks, companies, onAddTask, onUpdateTask, onDeleteTa
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'text-destructive';
-      case 'medium':
-        return 'text-primary';
-      case 'low':
-        return 'text-secondary';
-      default:
-        return 'text-muted-foreground';
-    }
-  };
-
-  const getCompanyName = (companyId?: string) => {
+  const getCompanyName = (companyId: string) => {
     if (!companyId) return null;
     const company = companies.find(c => c.id === companyId);
     return company?.name;
@@ -81,10 +58,10 @@ export function TaskList({ tasks, companies, onAddTask, onUpdateTask, onDeleteTa
           <div className="flex gap-4">
             <input
               type="text"
-              value={newTask}
-              onChange={(e) => setNewTask(e.target.value)}
+              value={newTaskTitle}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="What needs to be done?"
+              placeholder="Task title"
               className="input flex-1"
             />
             <button onClick={handleAddTask} className="btn btn-primary">
@@ -92,34 +69,33 @@ export function TaskList({ tasks, companies, onAddTask, onUpdateTask, onDeleteTa
               Add Task
             </button>
           </div>
-          <div className="flex gap-4">
-            <select
-              value={companyId}
-              onChange={(e) => setCompanyId(e.target.value)}
-              className="input"
-            >
-              <option value="">Select Company</option>
-              {companies.map(company => (
-                <option key={company.id} value={company.id}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="input"
+          <div className="flex flex-col gap-4">
+            <textarea
+              value={newTaskDescription}
+              onChange={(e) => setNewTaskDescription(e.target.value)}
+              placeholder="Task description (optional)"
+              className="input min-h-[100px] resize-y"
             />
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as 'low' | 'medium' | 'high')}
-              className="input"
-            >
-              <option value="low">Low Priority</option>
-              <option value="medium">Medium Priority</option>
-              <option value="high">High Priority</option>
-            </select>
+            <div className="flex gap-4">
+              <select
+                value={companyId}
+                onChange={(e) => setCompanyId(e.target.value)}
+                className="input min-w-[200px]"
+              >
+                <option value="">Select Company</option>
+                {companies.map(company => (
+                  <option key={company.id} value={company.id}>
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="date"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+                className="input"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -145,15 +121,18 @@ export function TaskList({ tasks, companies, onAddTask, onUpdateTask, onDeleteTa
                     className="checkbox"
                   />
                   <div className="flex-1">
-                    <span className={`task-text ${getPriorityColor(task.priority || 'medium')}`}>
-                      {task.text}
+                    <span className="task-text">
+                      {task.title}
                     </span>
+                    {task.description && (
+                      <p className="text-sm text-muted-foreground">{task.description}</p>
+                    )}
                     <div className="flex gap-2 text-sm text-muted-foreground">
                       {task.companyId && (
                         <span>Company: {getCompanyName(task.companyId)}</span>
                       )}
-                      {task.dueDate && (
-                        <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
+                      {task.deadline && (
+                        <span>Due: {task.deadline.toLocaleDateString()}</span>
                       )}
                     </div>
                   </div>

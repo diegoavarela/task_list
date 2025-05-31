@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import { PlusCircle, Trash2 } from 'lucide-react';
-
-interface Company {
-  id: string;
-  name: string;
-}
+import type { Company } from '../../types/company';
 
 interface CompanyConfigProps {
   companies: Company[];
@@ -19,7 +15,8 @@ export function CompanyConfig({ companies, onAddCompany, onDeleteCompany }: Comp
     if (newCompany.trim()) {
       onAddCompany({
         id: Date.now().toString(),
-        name: newCompany.trim()
+        name: newCompany.trim(),
+        createdAt: new Date()
       });
       setNewCompany('');
     }
@@ -69,7 +66,12 @@ export function CompanyConfig({ companies, onAddCompany, onDeleteCompany }: Comp
             <div className="space-y-4">
               {companies.map(company => (
                 <div key={company.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                  <span className="font-medium">{company.name}</span>
+                  <div>
+                    <span className="font-medium">{company.name}</span>
+                    <p className="text-sm text-muted-foreground">
+                      Created: {company.createdAt.toLocaleDateString()}
+                    </p>
+                  </div>
                   <button
                     onClick={() => onDeleteCompany(company.id)}
                     className="btn btn-ghost text-destructive hover:text-destructive-dark"
