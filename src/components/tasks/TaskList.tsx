@@ -130,6 +130,10 @@ export function TaskList({
     return companies.find(c => c.id === companyId)?.name || 'Unknown Company';
   };
 
+  const getCompanyColor = (companyId: string) => {
+    return companies.find(c => c.id === companyId)?.color || '#64748b';
+  };
+
   const toggleTaskCompletion = (task: Task) => {
     const updatedTask: Task = {
       ...task,
@@ -244,9 +248,18 @@ export function TaskList({
                       })}
                     >
                       <span className={`text-lg ${task.completed ? 'line-through text-muted-foreground' : ''}`}>{task.name}</span>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Building2 className="h-3 w-3" />
-                        <span>{getCompanyName(task.companyId)}</span>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
+                          style={{ 
+                            backgroundColor: `${getCompanyColor(task.companyId)}20`,
+                            color: getCompanyColor(task.companyId),
+                            border: `1px solid ${getCompanyColor(task.companyId)}40`
+                          }}
+                        >
+                          <Building2 className="h-3 w-3" />
+                          <span>{getCompanyName(task.companyId)}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -309,9 +322,18 @@ export function TaskList({
                               })}
                             >
                               <span className={`text-lg ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}>{subtask.name}</span>
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <Building2 className="h-3 w-3" />
-                                <span>{getCompanyName(subtask.companyId)}</span>
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
+                                  style={{ 
+                                    backgroundColor: `${getCompanyColor(subtask.companyId)}20`,
+                                    color: getCompanyColor(subtask.companyId),
+                                    border: `1px solid ${getCompanyColor(subtask.companyId)}40`
+                                  }}
+                                >
+                                  <Building2 className="h-3 w-3" />
+                                  <span>{getCompanyName(subtask.companyId)}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
