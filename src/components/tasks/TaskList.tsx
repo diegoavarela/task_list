@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Edit2, Building2, Calendar, ChevronDown, ChevronRight, CheckCircle2, Circle } from 'lucide-react';
+import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle } from 'lucide-react';
 import type { Task } from '../../types/task';
 import type { Company } from '../../types/company';
 import { Button } from '@/components/ui/button';
@@ -7,13 +7,13 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 
 interface TaskListProps {
   tasks: Task[];
   companies: Company[];
-  onAddTask: (name: string, companyId: string, date: Date) => void;
-  onEditTask: (taskId: string, name: string, companyId: string, date: Date, completed: boolean) => void;
+  onAddTask: (task: Task) => void;
+  onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
 }
 
@@ -34,14 +34,22 @@ export function TaskList({
     date: string;
     completed: boolean;
   } | null>(null);
-  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleAddTask = () => {
+    console.log('Adding task:', { name: newTaskName, company: newTaskCompany, date: newTaskDate });
     if (newTaskName.trim() && newTaskCompany) {
-      onAddTask(newTaskName.trim(), newTaskCompany, new Date(newTaskDate));
+      const newTask: Task = {
+        id: crypto.randomUUID(),
+        name: newTaskName.trim(),
+        companyId: newTaskCompany,
+        createdAt: new Date(newTaskDate),
+        completed: false,
+        subtasks: []
+      };
+      onAddTask(newTask);
       setNewTaskName('');
       setNewTaskCompany('');
       setNewTaskDate(format(new Date(), 'yyyy-MM-dd'));
@@ -49,18 +57,25 @@ export function TaskList({
         title: "Task added",
         description: "Your task has been added successfully.",
       });
+    } else {
+      console.log('Validation failed:', { 
+        hasName: !!newTaskName.trim(), 
+        hasCompany: !!newTaskCompany 
+      });
     }
   };
 
   const handleEditTask = () => {
     if (editingTask && editingTask.name.trim()) {
-      onEditTask(
-        editingTask.id, 
-        editingTask.name.trim(), 
-        editingTask.companyId,
-        new Date(editingTask.date),
-        editingTask.completed
-      );
+      const updatedTask: Task = {
+        id: editingTask.id,
+        name: editingTask.name.trim(),
+        companyId: editingTask.companyId,
+        createdAt: new Date(editingTask.date),
+        completed: editingTask.completed,
+        subtasks: []
+      };
+      onEditTask(updatedTask);
       setEditingTask(null);
       toast({
         title: "Task updated",
@@ -86,28 +101,16 @@ export function TaskList({
     }
   };
 
-  const toggleTask = (taskId: string) => {
-    const newExpanded = new Set(expandedTasks);
-    if (newExpanded.has(taskId)) {
-      newExpanded.delete(taskId);
-    } else {
-      newExpanded.add(taskId);
-    }
-    setExpandedTasks(newExpanded);
-  };
-
   const getCompanyName = (companyId: string) => {
     return companies.find(c => c.id === companyId)?.name || 'Unknown Company';
   };
 
   const toggleTaskCompletion = (task: Task) => {
-    onEditTask(
-      task.id,
-      task.name,
-      task.companyId,
-      new Date(task.createdAt),
-      !task.completed
-    );
+    const updatedTask: Task = {
+      ...task,
+      completed: !task.completed
+    };
+    onEditTask(updatedTask);
   };
 
   return (
@@ -142,7 +145,11 @@ export function TaskList({
               onChange={(e) => setNewTaskDate(e.target.value)}
               className="h-10 w-[200px]"
             />
-            <Button onClick={handleAddTask} className="border-2 border-black text-black hover:bg-black hover:text-white h-10">
+            <Button 
+              onClick={handleAddTask} 
+              className="border-2 border-black text-black hover:bg-black hover:text-white h-10"
+              type="button"
+            >
               <Plus className="mr-2 h-4 w-4" />
               Add Task
             </Button>
@@ -156,16 +163,6 @@ export function TaskList({
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => toggleTask(task.id)}
-                  className="p-1 hover:bg-accent rounded-md"
-                >
-                  {expandedTasks.has(task.id) ? (
-                    <ChevronDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4" />
-                  )}
-                </button>
-                <button
                   onClick={() => toggleTaskCompletion(task)}
                   className="p-1 hover:bg-accent rounded-md"
                 >
@@ -176,7 +173,7 @@ export function TaskList({
                   )}
                 </button>
                 <div 
-                  className="flex items-center gap-2 cursor-pointer hover:text-primary"
+                  className="flex flex-col cursor-pointer hover:text-primary"
                   onClick={() => setEditingTask({ 
                     id: task.id, 
                     name: task.name, 
@@ -185,10 +182,11 @@ export function TaskList({
                     completed: task.completed
                   })}
                 >
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{getCompanyName(task.companyId)}</span>
-                  <span className="text-muted-foreground">•</span>
-                  <span className={task.completed ? 'line-through text-muted-foreground' : ''}>{task.name}</span>
+                  <span className={`text-lg ${task.completed ? 'line-through text-muted-foreground' : ''}`}>{task.name}</span>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Building2 className="h-3 w-3" />
+                    <span>{getCompanyName(task.companyId)}</span>
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -218,7 +216,7 @@ export function TaskList({
                 </Button>
               </div>
             </div>
-            {expandedTasks.has(task.id) && task.subtasks && task.subtasks.length > 0 && (
+            {task.subtasks && task.subtasks.length > 0 && (
               <div className="border-t p-4">
                 <div className="space-y-2">
                   {task.subtasks.map((subtask) => (
@@ -235,7 +233,7 @@ export function TaskList({
                           )}
                         </button>
                         <div 
-                          className="flex items-center gap-2 cursor-pointer hover:text-primary"
+                          className="flex flex-col cursor-pointer hover:text-primary"
                           onClick={() => setEditingTask({ 
                             id: subtask.id, 
                             name: subtask.name, 
@@ -244,10 +242,11 @@ export function TaskList({
                             completed: subtask.completed
                           })}
                         >
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{getCompanyName(subtask.companyId)}</span>
-                          <span className="text-muted-foreground">•</span>
-                          <span className={subtask.completed ? 'line-through text-muted-foreground' : ''}>{subtask.name}</span>
+                          <span className={`text-lg ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}>{subtask.name}</span>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Building2 className="h-3 w-3" />
+                            <span>{getCompanyName(subtask.companyId)}</span>
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
