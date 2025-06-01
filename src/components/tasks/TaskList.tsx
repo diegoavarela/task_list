@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon } from 'lucide-react';
+import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X } from 'lucide-react';
 import type { Task } from '../../types/task';
 import type { Company } from '../../types/company';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TaskListProps {
   tasks: Task[];
@@ -303,44 +309,75 @@ export function TaskList({
   };
 
   const renderTask = (task: Task, isSubtask: boolean = false) => (
-    <div 
-      key={task.id} 
-      className={`rounded-lg border bg-card shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400 hover:scale-[1.01] hover:bg-gray-50/50 ${isSubtask ? 'ml-8' : ''}`}
-    >
-      <div className={`flex items-center justify-between ${isSubtask ? 'p-2' : 'p-4'}`}>
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-          {!isSubtask && (
-            <button
-              onClick={() => toggleTaskExpansion(task.id)}
-              className="p-1 hover:bg-accent rounded-md transition-all duration-300 hover:scale-110 flex-shrink-0"
-            >
-              {task.subtasks && task.subtasks.length > 0 ? (
-                expandedTasks.has(task.id) ? (
-                  <ChevronDownIcon className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )
-              ) : (
-                <div className="w-4" />
-              )}
-            </button>
+    <div key={task.id} className="space-y-2">
+      <div 
+        className="flex items-center justify-between p-4 rounded-lg border bg-card shadow-sm hover:shadow-xl transition-all duration-300 hover:border-gray-400 hover:scale-[1.02] hover:bg-gray-50/80 cursor-pointer group"
+        onClick={(e) => {
+          // Only handle click if it's not on a button
+          if (!(e.target as HTMLElement).closest('button')) {
+            if (!isSubtask && task.subtasks && task.subtasks.length > 0) {
+              toggleTaskExpansion(task.id);
+            } else {
+              setEditingTask(task);
+            }
+          }
+        }}
+      >
+        <div className="flex items-center gap-3">
+          {!isSubtask && task.subtasks && task.subtasks.length > 0 && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleTaskExpansion(task.id);
+                    }}
+                    className="hover:scale-110 transition-all duration-300"
+                  >
+                    {expandedTasks.has(task.id) ? (
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-gray-500" />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{expandedTasks.has(task.id) ? 'Collapse subtasks' : 'Expand subtasks'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
-          <button
-            onClick={() => isSubtask ? toggleSubtaskCompletion(task.parentTaskId!, task.id) : toggleTaskCompletion(task)}
-            className="p-1 hover:bg-accent rounded-md transition-all duration-300 hover:scale-110 flex-shrink-0"
-          >
-            {task.completed ? (
-              <CheckCircle2 className={`${isSubtask ? 'h-4 w-4' : 'h-5 w-5'} text-green-500`} />
-            ) : (
-              <Circle className={`${isSubtask ? 'h-4 w-4' : 'h-5 w-5'} text-muted-foreground`} />
-            )}
-          </button>
-          <span className={`${isSubtask ? 'text-sm' : 'text-lg'} truncate ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
-            {task.name}
-          </span>
-          {!isSubtask && (
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleTaskCompletion(task);
+                  }}
+                  className="hover:scale-110 transition-all duration-300"
+                >
+                  {task.completed ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <Circle className="h-5 w-5 text-gray-400" />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{task.completed ? 'Mark as incomplete' : 'Mark as complete'}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>
+              {task.name}
+            </span>
             <div 
-              className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0"
+              className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
               style={{ 
                 backgroundColor: `${getCompanyColor(task.companyId)}20`,
                 color: getCompanyColor(task.companyId),
@@ -350,84 +387,134 @@ export function TaskList({
               <Building2 className="h-3 w-3" />
               <span>{getCompanyName(task.companyId)}</span>
             </div>
-          )}
-        </div>
-        <div className="flex items-center gap-4 flex-shrink-0">
-          <div className={`flex items-center gap-1 ${isSubtask ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
-            <Calendar className={`${isSubtask ? 'h-3 w-3' : 'h-4 w-4'}`} />
-            {format(new Date(task.createdAt), 'MMM d, yyyy')}
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Calendar className="h-3 w-3" />
+              {format(new Date(task.createdAt), 'MMM d, yyyy')}
+            </div>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2">
           {!isSubtask && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setAddingSubtask(task.id)}
-              className="hover:bg-gray-100 transition-all duration-300 hover:scale-110"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAddingSubtask(task.id);
+                    }}
+                    className="hover:scale-110 transition-all duration-300"
+                  >
+                    <Plus className="h-4 w-4 text-gray-500" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Add subtask</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setEditingTask(task)}
-            className={`hover:bg-gray-100 transition-all duration-300 hover:scale-110 ${isSubtask ? 'h-7 w-7' : ''}`}
-          >
-            <Edit2 className={`${isSubtask ? 'h-3 w-3' : 'h-4 w-4'}`} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => isSubtask ? handleDeleteSubtask(task.parentTaskId!, task.id) : handleDeleteTask(task.id)}
-            className={`hover:bg-red-50 transition-all duration-300 hover:scale-110 ${isSubtask ? 'h-7 w-7' : ''}`}
-          >
-            <Trash2 className={`${isSubtask ? 'h-3 w-3' : 'h-4 w-4'} text-destructive`} />
-          </Button>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingTask(task);
+                  }}
+                  className="hover:scale-110 transition-all duration-300"
+                >
+                  <Edit2 className="h-4 w-4 text-gray-500" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Edit task</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteTask(task.id);
+                  }}
+                  className="hover:scale-110 transition-all duration-300"
+                >
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Delete task</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
-      {!isSubtask && addingSubtask === task.id && (
-        <div className="border-t p-4 bg-gray-50/50">
-          <div className="flex items-center gap-4">
-            <Input
-              placeholder="Subtask name"
-              value={newSubtaskName}
-              onChange={(e) => setNewSubtaskName(e.target.value)}
-              className="h-10 text-base shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleAddSubtask(task.id);
-                } else if (e.key === 'Escape') {
-                  setAddingSubtask(null);
-                  setNewSubtaskName('');
-                }
-              }}
-            />
-            <Button 
-              onClick={() => handleAddSubtask(task.id)}
-              className="border-2 border-foreground text-foreground hover:bg-foreground hover:text-background h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
-              type="button"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => {
-                setAddingSubtask(null);
-                setNewSubtaskName('');
-              }}
-              className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
-            >
-              Cancel
-            </Button>
-          </div>
+
+      {!isSubtask && expandedTasks.has(task.id) && task.subtasks && task.subtasks.length > 0 && (
+        <div className="ml-8 space-y-2">
+          {task.subtasks.map(subtask => renderTask(subtask, true))}
         </div>
       )}
-      {!isSubtask && task.subtasks && task.subtasks.length > 0 && expandedTasks.has(task.id) && (
-        <div className="border-t p-4 bg-gray-50/50">
-          <div className="space-y-2">
-            {task.subtasks.map((subtask) => renderTask(subtask, true))}
-          </div>
+
+      {!isSubtask && addingSubtask === task.id && (
+        <div className="ml-8 flex items-center gap-2">
+          <Input
+            type="text"
+            value={newSubtaskName}
+            onChange={(e) => setNewSubtaskName(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                handleAddSubtask(task.id);
+              }
+            }}
+            placeholder="Enter subtask name"
+            className="flex-1"
+            autoFocus
+          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleAddSubtask(task.id)}
+                  className="hover:bg-green-50 transition-all duration-300 hover:scale-110"
+                >
+                  <Plus className="h-4 w-4 text-green-600" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Add subtask</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setAddingSubtask(null);
+                    setNewSubtaskName('');
+                  }}
+                  className="hover:bg-gray-100 transition-all duration-300 hover:scale-110"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Cancel</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       )}
     </div>
