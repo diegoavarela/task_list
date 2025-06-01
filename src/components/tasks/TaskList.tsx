@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon } from 'lucide-react';
 import type { Task } from '../../types/task';
 import type { Company } from '../../types/company';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,7 @@ export function TaskList({
     companyId: string;
     date: string;
     completed: boolean;
+    parentTaskId?: string;
   } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
@@ -47,6 +48,10 @@ export function TaskList({
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showCompleted, setShowCompleted] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [addingSubtaskTo, setAddingSubtaskTo] = useState<string | null>(null);
+  const [newSubtaskName, setNewSubtaskName] = useState('');
+  const [newSubtaskCompany, setNewSubtaskCompany] = useState('');
   const { toast } = useToast();
 
   const filteredAndSortedTasks = useMemo(() => {
@@ -99,15 +104,29 @@ export function TaskList({
 
   const handleEditTask = () => {
     if (editingTask && editingTask.name.trim()) {
-      const updatedTask: Task = {
-        id: editingTask.id,
-        name: editingTask.name.trim(),
-        companyId: editingTask.companyId,
-        createdAt: new Date(editingTask.date),
-        completed: editingTask.completed,
-        subtasks: tasks.find(t => t.id === editingTask.id)?.subtasks || []
-      };
-      onUpdateTask(updatedTask);
+      if (editingTask.parentTaskId) {
+        // Handle subtask update
+        handleUpdateSubtask(
+          editingTask.parentTaskId,
+          editingTask.id,
+          {
+            name: editingTask.name.trim(),
+            completed: editingTask.completed,
+            createdAt: new Date(editingTask.date)
+          }
+        );
+      } else {
+        // Handle main task update
+        const updatedTask: Task = {
+          id: editingTask.id,
+          name: editingTask.name.trim(),
+          companyId: editingTask.companyId,
+          createdAt: new Date(editingTask.date),
+          completed: editingTask.completed,
+          subtasks: tasks.find(t => t.id === editingTask.id)?.subtasks || []
+        };
+        onUpdateTask(updatedTask);
+      }
       setEditingTask(null);
       toast({
         title: "Task updated",
@@ -219,6 +238,228 @@ export function TaskList({
     });
   };
 
+  const toggleTaskExpansion = (taskId: string) => {
+    setExpandedTasks(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  };
+
+  const handleAddSubtask = (parentTaskId: string) => {
+    if (newSubtaskName.trim()) {
+      const parentTask = tasks.find(t => t.id === parentTaskId);
+      if (!parentTask) return;
+
+      const newSubtask: Task = {
+        id: crypto.randomUUID(),
+        name: newSubtaskName.trim(),
+        companyId: parentTask.companyId,
+        createdAt: new Date(),
+        completed: false,
+        subtasks: [],
+        parentTaskId
+      };
+      
+      const updatedTask: Task = {
+        ...parentTask,
+        subtasks: [...(parentTask.subtasks || []), newSubtask]
+      };
+      
+      onUpdateTask(updatedTask);
+      setNewSubtaskName('');
+      setAddingSubtaskTo(null);
+      setExpandedTasks(prev => new Set([...prev, parentTaskId]));
+    }
+  };
+
+  const handleUpdateSubtask = (parentTaskId: string, subtaskId: string, updates: Partial<Task>) => {
+    const parentTask = tasks.find(t => t.id === parentTaskId);
+    if (!parentTask || !parentTask.subtasks) return;
+
+    const updatedSubtasks = parentTask.subtasks.map(subtask => 
+      subtask.id === subtaskId ? { ...subtask, ...updates } : subtask
+    );
+
+    const updatedTask: Task = {
+      ...parentTask,
+      subtasks: updatedSubtasks
+    };
+
+    onUpdateTask(updatedTask);
+  };
+
+  const handleDeleteSubtask = (parentTaskId: string, subtaskId: string) => {
+    const parentTask = tasks.find(t => t.id === parentTaskId);
+    if (!parentTask || !parentTask.subtasks) return;
+
+    const updatedSubtasks = parentTask.subtasks.filter(subtask => subtask.id !== subtaskId);
+    const updatedTask: Task = {
+      ...parentTask,
+      subtasks: updatedSubtasks
+    };
+
+    onUpdateTask(updatedTask);
+  };
+
+  const toggleSubtaskCompletion = (parentTaskId: string, subtaskId: string) => {
+    const parentTask = tasks.find(t => t.id === parentTaskId);
+    if (!parentTask || !parentTask.subtasks) return;
+
+    const updatedSubtasks = parentTask.subtasks.map(subtask => 
+      subtask.id === subtaskId ? { ...subtask, completed: !subtask.completed } : subtask
+    );
+
+    const updatedTask: Task = {
+      ...parentTask,
+      subtasks: updatedSubtasks
+    };
+
+    onUpdateTask(updatedTask);
+  };
+
+  const renderTask = (task: Task, isSubtask: boolean = false) => (
+    <div 
+      key={task.id} 
+      className={`rounded-lg border bg-card shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400 hover:scale-[1.01] hover:bg-gray-50/50 ${isSubtask ? 'ml-8' : ''}`}
+    >
+      <div className={`flex items-center justify-between ${isSubtask ? 'p-2' : 'p-4'}`}>
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          {!isSubtask && (
+            <button
+              onClick={() => toggleTaskExpansion(task.id)}
+              className="p-1 hover:bg-accent rounded-md transition-all duration-300 hover:scale-110 flex-shrink-0"
+            >
+              {task.subtasks && task.subtasks.length > 0 ? (
+                expandedTasks.has(task.id) ? (
+                  <ChevronDownIcon className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )
+              ) : (
+                <div className="w-4" />
+              )}
+            </button>
+          )}
+          <button
+            onClick={() => isSubtask ? toggleSubtaskCompletion(task.parentTaskId!, task.id) : toggleTaskCompletion(task)}
+            className="p-1 hover:bg-accent rounded-md transition-all duration-300 hover:scale-110 flex-shrink-0"
+          >
+            {task.completed ? (
+              <CheckCircle2 className={`${isSubtask ? 'h-4 w-4' : 'h-5 w-5'} text-green-500`} />
+            ) : (
+              <Circle className={`${isSubtask ? 'h-4 w-4' : 'h-5 w-5'} text-muted-foreground`} />
+            )}
+          </button>
+          <span className={`${isSubtask ? 'text-sm' : 'text-lg'} truncate ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+            {task.name}
+          </span>
+          {!isSubtask && (
+            <div 
+              className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0"
+              style={{ 
+                backgroundColor: `${getCompanyColor(task.companyId)}20`,
+                color: getCompanyColor(task.companyId),
+                border: `1px solid ${getCompanyColor(task.companyId)}40`
+              }}
+            >
+              <Building2 className="h-3 w-3" />
+              <span>{getCompanyName(task.companyId)}</span>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-4 flex-shrink-0">
+          <div className={`flex items-center gap-1 ${isSubtask ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
+            <Calendar className={`${isSubtask ? 'h-3 w-3' : 'h-4 w-4'}`} />
+            {format(new Date(task.createdAt), 'MMM d, yyyy')}
+          </div>
+          {!isSubtask && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setAddingSubtaskTo(task.id)}
+              className="hover:bg-gray-100 transition-all duration-300 hover:scale-110"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setEditingTask({ 
+              id: task.id, 
+              name: task.name, 
+              companyId: task.companyId,
+              date: format(new Date(task.createdAt), 'yyyy-MM-dd'),
+              completed: task.completed,
+              parentTaskId: isSubtask ? task.parentTaskId : undefined
+            })}
+            className={`hover:bg-gray-100 transition-all duration-300 hover:scale-110 ${isSubtask ? 'h-7 w-7' : ''}`}
+          >
+            <Edit2 className={`${isSubtask ? 'h-3 w-3' : 'h-4 w-4'}`} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => isSubtask ? handleDeleteSubtask(task.parentTaskId!, task.id) : handleDeleteTask(task.id)}
+            className={`hover:bg-red-50 transition-all duration-300 hover:scale-110 ${isSubtask ? 'h-7 w-7' : ''}`}
+          >
+            <Trash2 className={`${isSubtask ? 'h-3 w-3' : 'h-4 w-4'} text-destructive`} />
+          </Button>
+        </div>
+      </div>
+      {!isSubtask && addingSubtaskTo === task.id && (
+        <div className="border-t p-4 bg-gray-50/50">
+          <div className="flex items-center gap-4">
+            <Input
+              placeholder="Subtask name"
+              value={newSubtaskName}
+              onChange={(e) => setNewSubtaskName(e.target.value)}
+              className="h-10 text-base shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleAddSubtask(task.id);
+                } else if (e.key === 'Escape') {
+                  setAddingSubtaskTo(null);
+                  setNewSubtaskName('');
+                }
+              }}
+            />
+            <Button 
+              onClick={() => handleAddSubtask(task.id)}
+              className="border-2 border-black text-black hover:bg-black hover:text-white h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
+              type="button"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => {
+                setAddingSubtaskTo(null);
+                setNewSubtaskName('');
+              }}
+              className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+      {!isSubtask && task.subtasks && task.subtasks.length > 0 && expandedTasks.has(task.id) && (
+        <div className="border-t p-4 bg-gray-50/50">
+          <div className="space-y-2">
+            {task.subtasks.map((subtask) => renderTask(subtask, true))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-8">
       <Card className="rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01]">
@@ -325,136 +566,7 @@ export function TaskList({
                 </div>
               </div>
             )}
-            {filteredAndSortedTasks.map((task) => (
-              <div 
-                key={task.id} 
-                className="rounded-lg border bg-card shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400 hover:scale-[1.01] hover:bg-gray-50/50"
-              >
-                <div className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <button
-                      onClick={() => toggleTaskCompletion(task)}
-                      className="p-1 hover:bg-accent rounded-md transition-all duration-300 hover:scale-110 flex-shrink-0"
-                    >
-                      {task.completed ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <Circle className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </button>
-                    <span className={`text-lg truncate ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
-                      {task.name}
-                    </span>
-                    <div 
-                      className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0"
-                      style={{ 
-                        backgroundColor: `${getCompanyColor(task.companyId)}20`,
-                        color: getCompanyColor(task.companyId),
-                        border: `1px solid ${getCompanyColor(task.companyId)}40`
-                      }}
-                    >
-                      <Building2 className="h-3 w-3" />
-                      <span>{getCompanyName(task.companyId)}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 flex-shrink-0">
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      {format(new Date(task.createdAt), 'MMM d, yyyy')}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setEditingTask({ 
-                        id: task.id, 
-                        name: task.name, 
-                        companyId: task.companyId,
-                        date: format(new Date(task.createdAt), 'yyyy-MM-dd'),
-                        completed: task.completed
-                      })}
-                      className="hover:bg-gray-100 transition-all duration-300 hover:scale-110"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteTask(task.id)}
-                      className="hover:bg-red-50 transition-all duration-300 hover:scale-110"
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-                {task.subtasks && task.subtasks.length > 0 && (
-                  <div className="border-t p-4 bg-gray-50/50">
-                    <div className="space-y-2">
-                      {task.subtasks.map((subtask) => (
-                        <div 
-                          key={subtask.id} 
-                          className="flex items-center justify-between pl-8 hover:bg-white/50 rounded-md transition-all duration-300 hover:scale-[1.01]"
-                        >
-                          <div className="flex items-center gap-4 flex-1 min-w-0">
-                            <button
-                              onClick={() => toggleTaskCompletion(subtask)}
-                              className="p-1 hover:bg-accent rounded-md transition-all duration-300 hover:scale-110 flex-shrink-0"
-                            >
-                              {subtask.completed ? (
-                                <CheckCircle2 className="h-5 w-5 text-green-500" />
-                              ) : (
-                                <Circle className="h-5 w-5 text-muted-foreground" />
-                              )}
-                            </button>
-                            <span className={`text-lg truncate ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}>
-                              {subtask.name}
-                            </span>
-                            <div 
-                              className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0"
-                              style={{ 
-                                backgroundColor: `${getCompanyColor(subtask.companyId)}20`,
-                                color: getCompanyColor(subtask.companyId),
-                                border: `1px solid ${getCompanyColor(subtask.companyId)}40`
-                              }}
-                            >
-                              <Building2 className="h-3 w-3" />
-                              <span>{getCompanyName(subtask.companyId)}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4 flex-shrink-0">
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Calendar className="h-4 w-4" />
-                              {format(new Date(subtask.createdAt), 'MMM d, yyyy')}
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setEditingTask({ 
-                                id: subtask.id, 
-                                name: subtask.name, 
-                                companyId: subtask.companyId,
-                                date: format(new Date(subtask.createdAt), 'yyyy-MM-dd'),
-                                completed: subtask.completed
-                              })}
-                              className="hover:bg-gray-100 transition-all duration-300 hover:scale-110"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteTask(subtask.id)}
-                              className="hover:bg-red-50 transition-all duration-300 hover:scale-110"
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+            {filteredAndSortedTasks.map((task) => renderTask(task))}
           </div>
         </CardContent>
       </Card>
@@ -462,7 +574,7 @@ export function TaskList({
       <Dialog open={!!editingTask} onOpenChange={() => setEditingTask(null)}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Edit Task</DialogTitle>
+            <DialogTitle>Edit {editingTask?.parentTaskId ? 'Subtask' : 'Task'}</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
             <Input
@@ -471,18 +583,20 @@ export function TaskList({
               placeholder="Task name"
               className="shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
             />
-            <select
-              value={editingTask?.companyId || ''}
-              onChange={(e) => setEditingTask(prev => prev ? { ...prev, companyId: e.target.value } : null)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
-            >
-              <option value="">Select company</option>
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
+            {!editingTask?.parentTaskId && (
+              <select
+                value={editingTask?.companyId || ''}
+                onChange={(e) => setEditingTask(prev => prev ? { ...prev, companyId: e.target.value } : null)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+              >
+                <option value="">Select company</option>
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+            )}
             <Input
               type="date"
               value={editingTask?.date || ''}
