@@ -1,4 +1,4 @@
-import { Save } from 'lucide-react';
+import { Save, CheckSquare, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -25,7 +25,7 @@ export function Layout({ currentPage, onPageChange, children, onSave, saveError 
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b bg-gray-50/95 backdrop-blur supports-[backdrop-filter]:bg-gray-50/60 shadow-lg">
         <div className="container flex h-20 items-center">
           <div className="flex items-center gap-2">
             <svg
@@ -47,15 +47,25 @@ export function Layout({ currentPage, onPageChange, children, onSave, saveError 
             <Button
               variant={currentPage === 'tasks' ? 'default' : 'ghost'}
               onClick={() => onPageChange('tasks')}
-              className="text-lg font-medium"
+              className={`text-lg font-medium flex items-center gap-2 transition-all duration-300 ${
+                currentPage === 'tasks' 
+                  ? 'border-2 border-black text-black hover:bg-black hover:text-white' 
+                  : 'hover:bg-gray-100'
+              }`}
             >
+              <CheckSquare className="h-5 w-5" />
               Tasks
             </Button>
             <Button
               variant={currentPage === 'companies' ? 'default' : 'ghost'}
               onClick={() => onPageChange('companies')}
-              className="text-lg font-medium"
+              className={`text-lg font-medium flex items-center gap-2 transition-all duration-300 ${
+                currentPage === 'companies' 
+                  ? 'border-2 border-black text-black hover:bg-black hover:text-white' 
+                  : 'hover:bg-gray-100'
+              }`}
             >
+              <Building2 className="h-5 w-5" />
               Companies
             </Button>
             {onSave && (
@@ -63,7 +73,7 @@ export function Layout({ currentPage, onPageChange, children, onSave, saveError 
                 variant="outline"
                 size="icon"
                 onClick={handleSave}
-                className="ml-4 border-2 border-black text-black hover:bg-black hover:text-white"
+                className="ml-4 border-2 border-black text-black hover:bg-black hover:text-white transition-all duration-300 hover:scale-110"
               >
                 <Save className="h-5 w-5" />
               </Button>
