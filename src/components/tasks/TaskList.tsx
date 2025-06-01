@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download } from 'lucide-react';
+import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff } from 'lucide-react';
 import type { Task } from '../../types/task';
 import type { Company } from '../../types/company';
 import { Button } from '@/components/ui/button';
@@ -45,6 +45,7 @@ export function TaskList({
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [showCompleted, setShowCompleted] = useState(true);
   const { toast } = useToast();
 
   const filteredAndSortedTasks = useMemo(() => {
@@ -55,13 +56,18 @@ export function TaskList({
       filtered = filtered.filter(task => task.companyId === selectedCompany);
     }
 
+    // Filter by completion status
+    if (!showCompleted) {
+      filtered = filtered.filter(task => !task.completed);
+    }
+
     // Sort by date
     return [...filtered].sort((a, b) => {
       const dateA = new Date(a.createdAt).getTime();
       const dateB = new Date(b.createdAt).getTime();
       return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
     });
-  }, [tasks, selectedCompany, sortOrder]);
+  }, [tasks, selectedCompany, sortOrder, showCompleted]);
 
   const handleAddTask = () => {
     console.log('Adding task:', { name: newTaskName, company: newTaskCompany, date: newTaskDate });
@@ -263,6 +269,21 @@ export function TaskList({
           <div className="flex items-center justify-between">
             <CardTitle>Tasks</CardTitle>
             <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowCompleted(!showCompleted)}
+                className="flex items-center gap-2 w-[200px] h-10 justify-between shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400 hover:scale-[1.02]"
+                title={showCompleted ? "Hide completed tasks" : "Show completed tasks"}
+              >
+                <div className="flex items-center gap-2">
+                  {showCompleted ? (
+                    <Eye className="h-4 w-4" />
+                  ) : (
+                    <EyeOff className="h-4 w-4" />
+                  )}
+                  {showCompleted ? 'Hide Completed' : 'Show Completed'}
+                </div>
+              </Button>
               <Select value={selectedCompany} onValueChange={setSelectedCompany}>
                 <SelectTrigger className="w-[200px] shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400">
                   <SelectValue placeholder="Filter by company" />
