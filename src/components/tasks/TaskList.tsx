@@ -46,6 +46,7 @@ export function TaskList({
   const [selectedCompany, setSelectedCompany] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showCompleted, setShowCompleted] = useState(true);
+  const [showAddTask, setShowAddTask] = useState(false);
   const { toast } = useToast();
 
   const filteredAndSortedTasks = useMemo(() => {
@@ -223,52 +224,18 @@ export function TaskList({
       <Card className="rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01]">
         <CardHeader className="bg-gradient-to-r from-gray-50 to-white rounded-t-lg">
           <div className="flex items-center justify-between">
-            <CardTitle>Add New Task</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
-            <Input
-              placeholder="Task name"
-              value={newTaskName}
-              onChange={(e) => setNewTaskName(e.target.value)}
-              className="flex-1 h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
-            />
-            <select
-              value={newTaskCompany}
-              onChange={(e) => setNewTaskCompany(e.target.value)}
-              className="flex h-10 w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
-            >
-              <option value="">Select company</option>
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
-            <Input
-              type="date"
-              value={newTaskDate}
-              onChange={(e) => setNewTaskDate(e.target.value)}
-              className="h-10 w-[200px] shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
-            />
-            <Button 
-              onClick={handleAddTask} 
-              className="border-2 border-black text-black hover:bg-black hover:text-white h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
-              type="button"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Task
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01]">
-        <CardHeader className="bg-gradient-to-r from-gray-50 to-white rounded-t-lg">
-          <div className="flex items-center justify-between">
             <CardTitle>Tasks</CardTitle>
             <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowAddTask(!showAddTask)}
+                className={`flex items-center gap-2 h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400 hover:scale-[1.02] ${
+                  showAddTask ? 'bg-black text-white hover:bg-black/90' : ''
+                }`}
+              >
+                <Plus className="h-4 w-4" />
+                {showAddTask ? 'Cancel' : 'Add Task'}
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => setShowCompleted(!showCompleted)}
@@ -313,6 +280,51 @@ export function TaskList({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            {showAddTask && (
+              <div className="rounded-lg border bg-card shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400 hover:scale-[1.01] hover:bg-gray-50/50">
+                <div className="p-4">
+                  <div className="flex flex-col gap-4">
+                    <Input
+                      placeholder="Task name"
+                      value={newTaskName}
+                      onChange={(e) => setNewTaskName(e.target.value)}
+                      className="h-12 text-lg shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                    />
+                    <div className="flex gap-4">
+                      <select
+                        value={newTaskCompany}
+                        onChange={(e) => setNewTaskCompany(e.target.value)}
+                        className="flex h-12 w-[300px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                      >
+                        <option value="">Select company</option>
+                        {companies.map((company) => (
+                          <option key={company.id} value={company.id}>
+                            {company.name}
+                          </option>
+                        ))}
+                      </select>
+                      <Input
+                        type="date"
+                        value={newTaskDate}
+                        onChange={(e) => setNewTaskDate(e.target.value)}
+                        className="h-12 w-[200px] shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                      />
+                      <Button 
+                        onClick={() => {
+                          handleAddTask();
+                          setShowAddTask(false);
+                        }}
+                        className="border-2 border-black text-black hover:bg-black hover:text-white h-12 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
+                        type="button"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Task
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             {filteredAndSortedTasks.map((task) => (
               <div 
                 key={task.id} 
