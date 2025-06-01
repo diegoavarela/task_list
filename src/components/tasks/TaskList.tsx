@@ -45,7 +45,7 @@ export function TaskList({
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [showCompleted, setShowCompleted] = useState(true);
+  const [showCompleted, setShowCompleted] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
   const { toast } = useToast();
 
@@ -331,10 +331,10 @@ export function TaskList({
                 className="rounded-lg border bg-card shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400 hover:scale-[1.01] hover:bg-gray-50/50"
               >
                 <div className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
                     <button
                       onClick={() => toggleTaskCompletion(task)}
-                      className="p-1 hover:bg-accent rounded-md transition-all duration-300 hover:scale-110"
+                      className="p-1 hover:bg-accent rounded-md transition-all duration-300 hover:scale-110 flex-shrink-0"
                     >
                       {task.completed ? (
                         <CheckCircle2 className="h-5 w-5 text-green-500" />
@@ -342,33 +342,22 @@ export function TaskList({
                         <Circle className="h-5 w-5 text-muted-foreground" />
                       )}
                     </button>
+                    <span className={`text-lg truncate ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+                      {task.name}
+                    </span>
                     <div 
-                      className="flex flex-col cursor-pointer hover:text-primary transition-all duration-300"
-                      onClick={() => setEditingTask({ 
-                        id: task.id, 
-                        name: task.name, 
-                        companyId: task.companyId,
-                        date: format(new Date(task.createdAt), 'yyyy-MM-dd'),
-                        completed: task.completed
-                      })}
+                      className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0"
+                      style={{ 
+                        backgroundColor: `${getCompanyColor(task.companyId)}20`,
+                        color: getCompanyColor(task.companyId),
+                        border: `1px solid ${getCompanyColor(task.companyId)}40`
+                      }}
                     >
-                      <span className={`text-lg ${task.completed ? 'line-through text-muted-foreground' : ''}`}>{task.name}</span>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
-                          style={{ 
-                            backgroundColor: `${getCompanyColor(task.companyId)}20`,
-                            color: getCompanyColor(task.companyId),
-                            border: `1px solid ${getCompanyColor(task.companyId)}40`
-                          }}
-                        >
-                          <Building2 className="h-3 w-3" />
-                          <span>{getCompanyName(task.companyId)}</span>
-                        </div>
-                      </div>
+                      <Building2 className="h-3 w-3" />
+                      <span>{getCompanyName(task.companyId)}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-shrink-0">
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
                       {format(new Date(task.createdAt), 'MMM d, yyyy')}
@@ -405,10 +394,10 @@ export function TaskList({
                           key={subtask.id} 
                           className="flex items-center justify-between pl-8 hover:bg-white/50 rounded-md transition-all duration-300 hover:scale-[1.01]"
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-4 flex-1 min-w-0">
                             <button
                               onClick={() => toggleTaskCompletion(subtask)}
-                              className="p-1 hover:bg-accent rounded-md transition-all duration-300 hover:scale-110"
+                              className="p-1 hover:bg-accent rounded-md transition-all duration-300 hover:scale-110 flex-shrink-0"
                             >
                               {subtask.completed ? (
                                 <CheckCircle2 className="h-5 w-5 text-green-500" />
@@ -416,33 +405,22 @@ export function TaskList({
                                 <Circle className="h-5 w-5 text-muted-foreground" />
                               )}
                             </button>
+                            <span className={`text-lg truncate ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}>
+                              {subtask.name}
+                            </span>
                             <div 
-                              className="flex flex-col cursor-pointer hover:text-primary transition-all duration-300"
-                              onClick={() => setEditingTask({ 
-                                id: subtask.id, 
-                                name: subtask.name, 
-                                companyId: subtask.companyId,
-                                date: format(new Date(subtask.createdAt), 'yyyy-MM-dd'),
-                                completed: subtask.completed
-                              })}
+                              className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0"
+                              style={{ 
+                                backgroundColor: `${getCompanyColor(subtask.companyId)}20`,
+                                color: getCompanyColor(subtask.companyId),
+                                border: `1px solid ${getCompanyColor(subtask.companyId)}40`
+                              }}
                             >
-                              <span className={`text-lg ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}>{subtask.name}</span>
-                              <div className="flex items-center gap-2">
-                                <div 
-                                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
-                                  style={{ 
-                                    backgroundColor: `${getCompanyColor(subtask.companyId)}20`,
-                                    color: getCompanyColor(subtask.companyId),
-                                    border: `1px solid ${getCompanyColor(subtask.companyId)}40`
-                                  }}
-                                >
-                                  <Building2 className="h-3 w-3" />
-                                  <span>{getCompanyName(subtask.companyId)}</span>
-                                </div>
-                              </div>
+                              <Building2 className="h-3 w-3" />
+                              <span>{getCompanyName(subtask.companyId)}</span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-4 flex-shrink-0">
                             <div className="flex items-center gap-1 text-sm text-muted-foreground">
                               <Calendar className="h-4 w-4" />
                               {format(new Date(subtask.createdAt), 'MMM d, yyyy')}
