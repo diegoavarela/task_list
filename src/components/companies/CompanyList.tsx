@@ -80,7 +80,7 @@ export function CompanyList({ companies, onAddCompany, onEditCompany, onDeleteCo
               onChange={(e) => setNewCompanyName(e.target.value)}
               className="flex-1"
             />
-            <Button onClick={handleAddCompany} className="border-2 border-violet-500 text-violet-500 hover:bg-violet-500 hover:text-white">
+            <Button onClick={handleAddCompany} className="border-2 border-black text-black hover:bg-black hover:text-white h-10">
               <Plus className="mr-2 h-4 w-4" />
               Add Company
             </Button>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Edit2, CheckCircle2, Circle, ChevronDown, ChevronRight, Building2, Calendar } from 'lucide-react';
+import { Plus, Trash2, Edit2, Building2, Calendar, ChevronDown, ChevronRight } from 'lucide-react';
 import type { Task } from '../../types/task';
 import type { Company } from '../../types/company';
 import { Button } from '@/components/ui/button';
@@ -15,9 +15,6 @@ interface TaskListProps {
   onAddTask: (name: string, companyId: string) => void;
   onEditTask: (taskId: string, name: string) => void;
   onDeleteTask: (taskId: string) => void;
-  onAddCompany: (name: string) => void;
-  onEditCompany: (companyId: string, name: string) => void;
-  onDeleteCompany: (companyId: string) => void;
 }
 
 export function TaskList({
@@ -26,15 +23,10 @@ export function TaskList({
   onAddTask,
   onEditTask,
   onDeleteTask,
-  onAddCompany,
-  onEditCompany,
-  onDeleteCompany,
 }: TaskListProps) {
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskCompany, setNewTaskCompany] = useState('');
-  const [newCompanyName, setNewCompanyName] = useState('');
   const [editingTask, setEditingTask] = useState<{ id: string; name: string } | null>(null);
-  const [editingCompany, setEditingCompany] = useState<{ id: string; name: string } | null>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
@@ -52,17 +44,6 @@ export function TaskList({
     }
   };
 
-  const handleAddCompany = () => {
-    if (newCompanyName.trim()) {
-      onAddCompany(newCompanyName.trim());
-      setNewCompanyName('');
-      toast({
-        title: "Company added",
-        description: "Your company has been added successfully.",
-      });
-    }
-  };
-
   const handleEditTask = () => {
     if (editingTask && editingTask.name.trim()) {
       onEditTask(editingTask.id, editingTask.name.trim());
@@ -70,17 +51,6 @@ export function TaskList({
       toast({
         title: "Task updated",
         description: "Your task has been updated successfully.",
-      });
-    }
-  };
-
-  const handleEditCompany = () => {
-    if (editingCompany && editingCompany.name.trim()) {
-      onEditCompany(editingCompany.id, editingCompany.name.trim());
-      setEditingCompany(null);
-      toast({
-        title: "Company updated",
-        description: "Your company has been updated successfully.",
       });
     }
   };
@@ -128,7 +98,7 @@ export function TaskList({
               placeholder="Task name"
               value={newTaskName}
               onChange={(e) => setNewTaskName(e.target.value)}
-              className="flex-1"
+              className="flex-1 h-10"
             />
             <select
               value={newTaskCompany}
@@ -142,29 +112,9 @@ export function TaskList({
                 </option>
               ))}
             </select>
-            <Button onClick={handleAddTask} className="border-2 border-violet-500 text-violet-500 hover:bg-violet-500 hover:text-white">
+            <Button onClick={handleAddTask} className="border-2 border-black text-black hover:bg-black hover:text-white h-10">
               <Plus className="mr-2 h-4 w-4" />
               Add Task
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Add New Company</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
-            <Input
-              placeholder="Company name"
-              value={newCompanyName}
-              onChange={(e) => setNewCompanyName(e.target.value)}
-              className="flex-1"
-            />
-            <Button onClick={handleAddCompany} className="border-2 border-violet-500 text-violet-500 hover:bg-violet-500 hover:text-white">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Company
             </Button>
           </div>
         </CardContent>
@@ -213,7 +163,7 @@ export function TaskList({
                 </Button>
               </div>
             </div>
-            {expandedTasks.has(task.id) && task.subtasks.length > 0 && (
+            {expandedTasks.has(task.id) && task.subtasks && task.subtasks.length > 0 && (
               <div className="border-t p-4">
                 <div className="space-y-2">
                   {task.subtasks.map((subtask) => (

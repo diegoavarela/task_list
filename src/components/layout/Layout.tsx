@@ -36,25 +36,25 @@ export function Layout({ currentPage, onPageChange, children, onSave, saveError 
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="h-8 w-8 text-primary"
+              className="h-8 w-8 text-black"
             >
               <path d="M9 11l3 3L22 4" />
               <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
             </svg>
-            <h1 className="text-2xl font-bold text-primary">The Freelo List</h1>
+            <h1 className="text-2xl font-bold text-black">The Freelo List</h1>
           </div>
           <nav className="ml-auto flex gap-4">
             <Button
               variant={currentPage === 'tasks' ? 'default' : 'ghost'}
               onClick={() => onPageChange('tasks')}
-              className="text-lg"
+              className="text-lg font-medium"
             >
               Tasks
             </Button>
             <Button
               variant={currentPage === 'companies' ? 'default' : 'ghost'}
               onClick={() => onPageChange('companies')}
-              className="text-lg"
+              className="text-lg font-medium"
             >
               Companies
             </Button>
@@ -63,7 +63,7 @@ export function Layout({ currentPage, onPageChange, children, onSave, saveError 
                 variant="outline"
                 size="icon"
                 onClick={handleSave}
-                className="ml-4"
+                className="ml-4 border-2 border-black text-black hover:bg-black hover:text-white"
               >
                 <Save className="h-5 w-5" />
               </Button>
