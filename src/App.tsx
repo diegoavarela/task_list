@@ -9,6 +9,7 @@ import { saveTasks, loadTasks, saveCompanies, loadCompanies } from './lib/storag
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 import { useToast } from "@/components/ui/use-toast"
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
 type Page = 'tasks' | 'companies';
 
@@ -22,6 +23,36 @@ export default function App() {
   const [showAddTask, setShowAddTask] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const { toast } = useToast();
+
+  const shortcuts = [
+    {
+      key: '⌘/Ctrl + N',
+      callback: () => setShowAddTask(true),
+      description: 'Add new task'
+    },
+    {
+      key: '⌘/Ctrl + S',
+      callback: () => handleSave(),
+      description: 'Save changes'
+    },
+    {
+      key: '⌘/Ctrl + H',
+      callback: () => setShowCompleted(!showCompleted),
+      description: 'Toggle completed tasks'
+    },
+    {
+      key: '⌘/Ctrl + 1',
+      callback: () => setCurrentPage('tasks'),
+      description: 'Switch to Tasks page'
+    },
+    {
+      key: '⌘/Ctrl + 2',
+      callback: () => setCurrentPage('companies'),
+      description: 'Switch to Companies page'
+    }
+  ];
+
+  useKeyboardShortcuts(shortcuts);
 
   useEffect(() => {
     const loadedTasks = loadTasks();
@@ -102,6 +133,42 @@ export default function App() {
   const handleDeleteCompany = (companyId: string) => {
     setCompanies(prev => prev.filter(company => company.id !== companyId));
   };
+
+  const handleSave = useCallback(async () => {
+    if (isSaving) return;
+    
+    setIsSaving(true);
+    setSaveError(null);
+    
+    try {
+      const response = await fetch('/api/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tasks, companies }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save changes');
+      }
+      
+      setLastSaved(new Date());
+      toast({
+        title: "Changes saved",
+        description: "Your changes have been saved successfully.",
+      });
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Failed to save changes');
+      toast({
+        title: "Error saving changes",
+        description: "There was an error saving your changes. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [tasks, companies, isSaving, toast]);
 
   return (
     <ThemeProvider defaultTheme="system" storageKey="task-list-theme">

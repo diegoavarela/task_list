@@ -2,6 +2,7 @@ import { Save, CheckSquare, Building2, Download, FileJson, FileSpreadsheet } fro
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -164,7 +165,7 @@ export function Layout({
                 onClick={() => onPageChange('tasks')}
                 className={`text-sm font-medium flex items-center gap-2 transition-all duration-300 ${
                   currentPage === 'tasks' 
-                    ? 'border-2 border-black text-black hover:bg-black hover:text-white dark:border-white dark:text-white dark:hover:bg-white dark:hover:text-black' 
+                    ? 'border-2 border-foreground text-foreground hover:bg-foreground hover:text-background' 
                     : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                 } px-4 py-2 rounded-md`}
               >
@@ -175,7 +176,7 @@ export function Layout({
                 onClick={() => onPageChange('companies')}
                 className={`text-sm font-medium flex items-center gap-2 transition-all duration-300 ${
                   currentPage === 'companies' 
-                    ? 'border-2 border-black text-black hover:bg-black hover:text-white dark:border-white dark:text-white dark:hover:bg-white dark:hover:text-black' 
+                    ? 'border-2 border-foreground text-foreground hover:bg-foreground hover:text-background' 
                     : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                 } px-4 py-2 rounded-md`}
               >
@@ -184,6 +185,7 @@ export function Layout({
               </button>
             </nav>
             <div className="flex items-center gap-2">
+              <KeyboardShortcuts />
               <ThemeToggle />
               <ExportDropdown tasks={tasks} companies={companies} />
               <div className="flex items-center gap-2">
@@ -199,7 +201,7 @@ export function Layout({
                 ) : null}
                 <Button
                   onClick={onSave}
-                  className="gap-2 border-2 border-black text-black hover:bg-black hover:text-white transition-all duration-300 hover:scale-110 dark:border-white dark:text-white dark:hover:bg-white dark:hover:text-black"
+                  className="gap-2 border-2 border-foreground text-foreground hover:bg-foreground hover:text-background transition-all duration-300 hover:scale-110"
                   disabled={!onSave || isSaving}
                 >
                   <Save className="h-4 w-4" />
