@@ -20,7 +20,7 @@ interface TaskListProps {
   tasks: Task[];
   companies: Company[];
   onAddTask: (task: Task) => void;
-  onEditTask: (task: Task) => void;
+  onUpdateTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
 }
 
@@ -28,7 +28,7 @@ export function TaskList({
   tasks,
   companies,
   onAddTask,
-  onEditTask,
+  onUpdateTask,
   onDeleteTask,
 }: TaskListProps) {
   const [newTaskName, setNewTaskName] = useState('');
@@ -98,9 +98,9 @@ export function TaskList({
         companyId: editingTask.companyId,
         createdAt: new Date(editingTask.date),
         completed: editingTask.completed,
-        subtasks: []
+        subtasks: tasks.find(t => t.id === editingTask.id)?.subtasks || []
       };
-      onEditTask(updatedTask);
+      onUpdateTask(updatedTask);
       setEditingTask(null);
       toast({
         title: "Task updated",
@@ -135,7 +135,7 @@ export function TaskList({
       ...task,
       completed: !task.completed
     };
-    onEditTask(updatedTask);
+    onUpdateTask(updatedTask);
   };
 
   return (
@@ -202,12 +202,13 @@ export function TaskList({
               </Select>
               <Button
                 variant="outline"
-                size="sm"
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 w-[200px] h-10 justify-between"
               >
-                <Calendar className="h-4 w-4" />
-                {sortOrder === 'asc' ? 'Oldest First' : 'Newest First'}
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  {sortOrder === 'asc' ? 'Oldest First' : 'Newest First'}
+                </div>
                 <ChevronDown className={`h-4 w-4 transition-transform ${sortOrder === 'desc' ? 'rotate-180' : ''}`} />
               </Button>
             </div>
@@ -386,7 +387,10 @@ export function TaskList({
             <Button variant="outline" onClick={() => setEditingTask(null)}>
               Cancel
             </Button>
-            <Button onClick={handleEditTask}>
+            <Button 
+              onClick={handleEditTask}
+              className="border-2 border-black text-black hover:bg-black hover:text-white"
+            >
               Save Changes
             </Button>
           </DialogFooter>
