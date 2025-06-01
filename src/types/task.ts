@@ -3,5 +3,6 @@ export interface Task {
   name: string;
   companyId: string;
   createdAt: Date;
-  subtasks: Task[];
+  completed: boolean;
+  subtasks?: Task[];
 } 

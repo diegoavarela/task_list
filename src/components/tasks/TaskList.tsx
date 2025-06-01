@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Edit2, Building2, Calendar, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Edit2, Building2, Calendar, ChevronDown, ChevronRight, CheckCircle2, Circle } from 'lucide-react';
 import type { Task } from '../../types/task';
 import type { Company } from '../../types/company';
 import { Button } from '@/components/ui/button';
@@ -7,13 +7,13 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 interface TaskListProps {
   tasks: Task[];
   companies: Company[];
-  onAddTask: (name: string, companyId: string) => void;
-  onEditTask: (taskId: string, name: string) => void;
+  onAddTask: (name: string, companyId: string, date: Date) => void;
+  onEditTask: (taskId: string, name: string, companyId: string, date: Date, completed: boolean) => void;
   onDeleteTask: (taskId: string) => void;
 }
 
@@ -26,7 +26,14 @@ export function TaskList({
 }: TaskListProps) {
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskCompany, setNewTaskCompany] = useState('');
-  const [editingTask, setEditingTask] = useState<{ id: string; name: string } | null>(null);
+  const [newTaskDate, setNewTaskDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [editingTask, setEditingTask] = useState<{ 
+    id: string; 
+    name: string; 
+    companyId: string;
+    date: string;
+    completed: boolean;
+  } | null>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
@@ -34,9 +41,10 @@ export function TaskList({
 
   const handleAddTask = () => {
     if (newTaskName.trim() && newTaskCompany) {
-      onAddTask(newTaskName.trim(), newTaskCompany);
+      onAddTask(newTaskName.trim(), newTaskCompany, new Date(newTaskDate));
       setNewTaskName('');
       setNewTaskCompany('');
+      setNewTaskDate(format(new Date(), 'yyyy-MM-dd'));
       toast({
         title: "Task added",
         description: "Your task has been added successfully.",
@@ -46,7 +54,13 @@ export function TaskList({
 
   const handleEditTask = () => {
     if (editingTask && editingTask.name.trim()) {
-      onEditTask(editingTask.id, editingTask.name.trim());
+      onEditTask(
+        editingTask.id, 
+        editingTask.name.trim(), 
+        editingTask.companyId,
+        new Date(editingTask.date),
+        editingTask.completed
+      );
       setEditingTask(null);
       toast({
         title: "Task updated",
@@ -86,6 +100,16 @@ export function TaskList({
     return companies.find(c => c.id === companyId)?.name || 'Unknown Company';
   };
 
+  const toggleTaskCompletion = (task: Task) => {
+    onEditTask(
+      task.id,
+      task.name,
+      task.companyId,
+      new Date(task.createdAt),
+      !task.completed
+    );
+  };
+
   return (
     <div className="space-y-8">
       <Card>
@@ -112,6 +136,12 @@ export function TaskList({
                 </option>
               ))}
             </select>
+            <Input
+              type="date"
+              value={newTaskDate}
+              onChange={(e) => setNewTaskDate(e.target.value)}
+              className="h-10 w-[200px]"
+            />
             <Button onClick={handleAddTask} className="border-2 border-black text-black hover:bg-black hover:text-white h-10">
               <Plus className="mr-2 h-4 w-4" />
               Add Task
@@ -135,11 +165,30 @@ export function TaskList({
                     <ChevronRight className="h-4 w-4" />
                   )}
                 </button>
-                <div className="flex items-center gap-2">
+                <button
+                  onClick={() => toggleTaskCompletion(task)}
+                  className="p-1 hover:bg-accent rounded-md"
+                >
+                  {task.completed ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <Circle className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </button>
+                <div 
+                  className="flex items-center gap-2 cursor-pointer hover:text-primary"
+                  onClick={() => setEditingTask({ 
+                    id: task.id, 
+                    name: task.name, 
+                    companyId: task.companyId,
+                    date: format(new Date(task.createdAt), 'yyyy-MM-dd'),
+                    completed: task.completed
+                  })}
+                >
                   <Building2 className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">{getCompanyName(task.companyId)}</span>
                   <span className="text-muted-foreground">•</span>
-                  <span>{task.name}</span>
+                  <span className={task.completed ? 'line-through text-muted-foreground' : ''}>{task.name}</span>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -150,7 +199,13 @@ export function TaskList({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setEditingTask({ id: task.id, name: task.name })}
+                  onClick={() => setEditingTask({ 
+                    id: task.id, 
+                    name: task.name, 
+                    companyId: task.companyId,
+                    date: format(new Date(task.createdAt), 'yyyy-MM-dd'),
+                    completed: task.completed
+                  })}
                 >
                   <Edit2 className="h-4 w-4" />
                 </Button>
@@ -169,10 +224,31 @@ export function TaskList({
                   {task.subtasks.map((subtask) => (
                     <div key={subtask.id} className="flex items-center justify-between pl-8">
                       <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{getCompanyName(subtask.companyId)}</span>
-                        <span className="text-muted-foreground">•</span>
-                        <span>{subtask.name}</span>
+                        <button
+                          onClick={() => toggleTaskCompletion(subtask)}
+                          className="p-1 hover:bg-accent rounded-md"
+                        >
+                          {subtask.completed ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <Circle className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </button>
+                        <div 
+                          className="flex items-center gap-2 cursor-pointer hover:text-primary"
+                          onClick={() => setEditingTask({ 
+                            id: subtask.id, 
+                            name: subtask.name, 
+                            companyId: subtask.companyId,
+                            date: format(new Date(subtask.createdAt), 'yyyy-MM-dd'),
+                            completed: subtask.completed
+                          })}
+                        >
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{getCompanyName(subtask.companyId)}</span>
+                          <span className="text-muted-foreground">•</span>
+                          <span className={subtask.completed ? 'line-through text-muted-foreground' : ''}>{subtask.name}</span>
+                        </div>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -182,7 +258,13 @@ export function TaskList({
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setEditingTask({ id: subtask.id, name: subtask.name })}
+                          onClick={() => setEditingTask({ 
+                            id: subtask.id, 
+                            name: subtask.name, 
+                            companyId: subtask.companyId,
+                            date: format(new Date(subtask.createdAt), 'yyyy-MM-dd'),
+                            completed: subtask.completed
+                          })}
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
@@ -208,12 +290,39 @@ export function TaskList({
           <DialogHeader>
             <DialogTitle>Edit Task</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-4 space-y-4">
             <Input
               value={editingTask?.name || ''}
               onChange={(e) => setEditingTask(prev => prev ? { ...prev, name: e.target.value } : null)}
               placeholder="Task name"
             />
+            <select
+              value={editingTask?.companyId || ''}
+              onChange={(e) => setEditingTask(prev => prev ? { ...prev, companyId: e.target.value } : null)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="">Select company</option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name}
+                </option>
+              ))}
+            </select>
+            <Input
+              type="date"
+              value={editingTask?.date || ''}
+              onChange={(e) => setEditingTask(prev => prev ? { ...prev, date: e.target.value } : null)}
+              className="h-10"
+            />
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={editingTask?.completed || false}
+                onChange={(e) => setEditingTask(prev => prev ? { ...prev, completed: e.target.checked } : null)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <label>Mark as completed</label>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingTask(null)}>
