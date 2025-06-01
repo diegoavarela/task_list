@@ -56,16 +56,16 @@ export default function Companies() {
           {companies.map((company) => (
             <div 
               key={company.id}
-              className="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow cursor-pointer"
+              className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] hover:bg-base-200/50 cursor-pointer group"
               onClick={() => navigate(`/companies/${company.id}/tasks`)}
             >
               <div className="card-body">
                 <div className="flex items-center space-x-4">
-                  <div className="text-4xl">{company.logo}</div>
-                  <h2 className="card-title text-xl">{company.name}</h2>
+                  <div className="text-4xl group-hover:scale-110 transition-transform duration-300">{company.logo}</div>
+                  <h2 className="card-title text-xl group-hover:text-primary transition-colors duration-300">{company.name}</h2>
                 </div>
                 <div className="card-actions justify-end mt-4">
-                  <button className="btn btn-primary btn-sm">View Tasks</button>
+                  <button className="btn btn-primary btn-sm hover:scale-105 transition-transform duration-300 hover:shadow-lg">View Tasks</button>
                 </div>
               </div>
             </div>

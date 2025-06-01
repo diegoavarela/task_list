@@ -121,14 +121,15 @@ export function CompanyConfig({ companies, onAddCompany, onUpdateCompany, onDele
             {companies.map((company) => (
               <div
                 key={company.id}
-                className="flex items-center justify-between p-4 rounded-lg border bg-card"
+                className="flex items-center justify-between p-4 rounded-lg border bg-card shadow-sm hover:shadow-xl transition-all duration-300 hover:border-gray-400 hover:scale-[1.02] hover:bg-gray-50/80 cursor-pointer group"
               >
-                <span className="text-sm font-medium">{company.name}</span>
+                <span className="text-sm font-medium group-hover:text-primary transition-colors duration-300">{company.name}</span>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => handleDeleteClick(company.id)}
                   aria-label="Delete"
+                  className="hover:bg-red-50 transition-all duration-300 hover:scale-110 hover:shadow-md"
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>

@@ -140,8 +140,8 @@ export function TaskList({
 
   return (
     <div className="space-y-8">
-      <Card>
-        <CardHeader>
+      <Card className="rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01]">
+        <CardHeader className="bg-gradient-to-r from-gray-50 to-white rounded-t-lg">
           <CardTitle>Add New Task</CardTitle>
         </CardHeader>
         <CardContent>
@@ -150,12 +150,12 @@ export function TaskList({
               placeholder="Task name"
               value={newTaskName}
               onChange={(e) => setNewTaskName(e.target.value)}
-              className="flex-1 h-10"
+              className="flex-1 h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
             />
             <select
               value={newTaskCompany}
               onChange={(e) => setNewTaskCompany(e.target.value)}
-              className="flex h-10 w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="flex h-10 w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
             >
               <option value="">Select company</option>
               {companies.map((company) => (
@@ -168,11 +168,11 @@ export function TaskList({
               type="date"
               value={newTaskDate}
               onChange={(e) => setNewTaskDate(e.target.value)}
-              className="h-10 w-[200px]"
+              className="h-10 w-[200px] shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
             />
             <Button 
               onClick={handleAddTask} 
-              className="border-2 border-black text-black hover:bg-black hover:text-white h-10"
+              className="border-2 border-black text-black hover:bg-black hover:text-white h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
               type="button"
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -182,13 +182,13 @@ export function TaskList({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
+      <Card className="rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01]">
+        <CardHeader className="bg-gradient-to-r from-gray-50 to-white rounded-t-lg">
           <div className="flex items-center justify-between">
             <CardTitle>Tasks</CardTitle>
             <div className="flex items-center gap-4">
               <Select value={selectedCompany} onValueChange={setSelectedCompany}>
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-[200px] shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400">
                   <SelectValue placeholder="Filter by company" />
                 </SelectTrigger>
                 <SelectContent>
@@ -203,13 +203,13 @@ export function TaskList({
               <Button
                 variant="outline"
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="flex items-center gap-2 w-[200px] h-10 justify-between"
+                className="flex items-center gap-2 w-[200px] h-10 justify-between shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400 hover:scale-[1.02]"
               >
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   {sortOrder === 'asc' ? 'Oldest First' : 'Newest First'}
                 </div>
-                <ChevronDown className={`h-4 w-4 transition-transform ${sortOrder === 'desc' ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${sortOrder === 'desc' ? 'rotate-180' : ''}`} />
               </Button>
             </div>
           </div>
@@ -217,12 +217,15 @@ export function TaskList({
         <CardContent>
           <div className="space-y-4">
             {filteredAndSortedTasks.map((task) => (
-              <div key={task.id} className="rounded-lg border bg-card">
+              <div 
+                key={task.id} 
+                className="rounded-lg border bg-card shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400 hover:scale-[1.01] hover:bg-gray-50/50"
+              >
                 <div className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => toggleTaskCompletion(task)}
-                      className="p-1 hover:bg-accent rounded-md"
+                      className="p-1 hover:bg-accent rounded-md transition-all duration-300 hover:scale-110"
                     >
                       {task.completed ? (
                         <CheckCircle2 className="h-5 w-5 text-green-500" />
@@ -231,7 +234,7 @@ export function TaskList({
                       )}
                     </button>
                     <div 
-                      className="flex flex-col cursor-pointer hover:text-primary"
+                      className="flex flex-col cursor-pointer hover:text-primary transition-all duration-300"
                       onClick={() => setEditingTask({ 
                         id: task.id, 
                         name: task.name, 
@@ -262,6 +265,7 @@ export function TaskList({
                         date: format(new Date(task.createdAt), 'yyyy-MM-dd'),
                         completed: task.completed
                       })}
+                      className="hover:bg-gray-100 transition-all duration-300 hover:scale-110"
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
@@ -269,20 +273,24 @@ export function TaskList({
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDeleteTask(task.id)}
+                      className="hover:bg-red-50 transition-all duration-300 hover:scale-110"
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
                 </div>
                 {task.subtasks && task.subtasks.length > 0 && (
-                  <div className="border-t p-4">
+                  <div className="border-t p-4 bg-gray-50/50">
                     <div className="space-y-2">
                       {task.subtasks.map((subtask) => (
-                        <div key={subtask.id} className="flex items-center justify-between pl-8">
+                        <div 
+                          key={subtask.id} 
+                          className="flex items-center justify-between pl-8 hover:bg-white/50 rounded-md transition-all duration-300 hover:scale-[1.01]"
+                        >
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => toggleTaskCompletion(subtask)}
-                              className="p-1 hover:bg-accent rounded-md"
+                              className="p-1 hover:bg-accent rounded-md transition-all duration-300 hover:scale-110"
                             >
                               {subtask.completed ? (
                                 <CheckCircle2 className="h-5 w-5 text-green-500" />
@@ -291,7 +299,7 @@ export function TaskList({
                               )}
                             </button>
                             <div 
-                              className="flex flex-col cursor-pointer hover:text-primary"
+                              className="flex flex-col cursor-pointer hover:text-primary transition-all duration-300"
                               onClick={() => setEditingTask({ 
                                 id: subtask.id, 
                                 name: subtask.name, 
@@ -322,6 +330,7 @@ export function TaskList({
                                 date: format(new Date(subtask.createdAt), 'yyyy-MM-dd'),
                                 completed: subtask.completed
                               })}
+                              className="hover:bg-gray-100 transition-all duration-300 hover:scale-110"
                             >
                               <Edit2 className="h-4 w-4" />
                             </Button>
@@ -329,6 +338,7 @@ export function TaskList({
                               variant="ghost"
                               size="icon"
                               onClick={() => handleDeleteTask(subtask.id)}
+                              className="hover:bg-red-50 transition-all duration-300 hover:scale-110"
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
@@ -345,7 +355,7 @@ export function TaskList({
       </Card>
 
       <Dialog open={!!editingTask} onOpenChange={() => setEditingTask(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Edit Task</DialogTitle>
           </DialogHeader>
@@ -354,11 +364,12 @@ export function TaskList({
               value={editingTask?.name || ''}
               onChange={(e) => setEditingTask(prev => prev ? { ...prev, name: e.target.value } : null)}
               placeholder="Task name"
+              className="shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
             />
             <select
               value={editingTask?.companyId || ''}
               onChange={(e) => setEditingTask(prev => prev ? { ...prev, companyId: e.target.value } : null)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
             >
               <option value="">Select company</option>
               {companies.map((company) => (
@@ -371,25 +382,29 @@ export function TaskList({
               type="date"
               value={editingTask?.date || ''}
               onChange={(e) => setEditingTask(prev => prev ? { ...prev, date: e.target.value } : null)}
-              className="h-10"
+              className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
             />
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 checked={editingTask?.completed || false}
                 onChange={(e) => setEditingTask(prev => prev ? { ...prev, completed: e.target.checked } : null)}
-                className="h-4 w-4 rounded border-gray-300"
+                className="h-4 w-4 rounded border-gray-300 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
               />
               <label>Mark as completed</label>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingTask(null)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setEditingTask(null)}
+              className="hover:bg-gray-100 transition-all duration-300 hover:scale-[1.02]"
+            >
               Cancel
             </Button>
             <Button 
               onClick={handleEditTask}
-              className="border-2 border-black text-black hover:bg-black hover:text-white"
+              className="border-2 border-black text-black hover:bg-black hover:text-white transition-all duration-300 hover:scale-[1.02]"
             >
               Save Changes
             </Button>
@@ -398,7 +413,7 @@ export function TaskList({
       </Dialog>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Delete Task</DialogTitle>
             <DialogDescription>
@@ -406,10 +421,18 @@ export function TaskList({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteDialogOpen(false)}
+              className="hover:bg-gray-100 transition-all duration-300 hover:scale-[1.02]"
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDeleteTask}>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteTask}
+              className="hover:bg-red-600 transition-all duration-300 hover:scale-[1.02]"
+            >
               Delete
             </Button>
           </DialogFooter>
