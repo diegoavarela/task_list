@@ -1,6 +1,7 @@
 import { Save, CheckSquare, Building2, Download, FileJson, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { ThemeToggle } from '@/components/theme-toggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,15 +11,18 @@ import {
 import { format } from 'date-fns';
 import type { Task } from '@/types/task';
 import type { Company } from '@/types/company';
+import type { ReactNode } from 'react';
 
 interface LayoutProps {
+  children: ReactNode;
   currentPage: 'tasks' | 'companies';
   onPageChange: (page: 'tasks' | 'companies') => void;
-  children: React.ReactNode;
   onSave?: () => void;
   saveError?: string | null;
   tasks?: Task[];
   companies?: Company[];
+  isSaving?: boolean;
+  lastSaved?: Date | null;
 }
 
 function ExportDropdown({ tasks, companies }: { tasks?: Task[], companies?: Company[] }) {
@@ -123,22 +127,20 @@ function ExportDropdown({ tasks, companies }: { tasks?: Task[], companies?: Comp
   );
 }
 
-export function Layout({ currentPage, onPageChange, children, onSave, saveError, tasks, companies }: LayoutProps) {
-  const { toast } = useToast();
-
-  const handleSave = () => {
-    if (onSave) {
-      onSave();
-      toast({
-        title: "Changes saved",
-        description: "Your changes have been saved successfully.",
-      });
-    }
-  };
-
+export function Layout({ 
+  children, 
+  currentPage, 
+  onPageChange, 
+  onSave, 
+  saveError, 
+  tasks, 
+  companies,
+  isSaving,
+  lastSaved 
+}: LayoutProps) {
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 w-full border-b bg-gray-50/95 backdrop-blur supports-[backdrop-filter]:bg-gray-50/60 shadow-lg">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-20 items-center">
           <div className="flex items-center gap-2">
             <svg
@@ -149,50 +151,63 @@ export function Layout({ currentPage, onPageChange, children, onSave, saveError,
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="h-8 w-8 text-black"
+              className="h-8 w-8"
             >
               <path d="M9 11l3 3L22 4" />
               <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
             </svg>
-            <h1 className="text-2xl font-bold text-black">The Freelo List</h1>
+            <h1 className="text-2xl font-bold">The Freelo List</h1>
           </div>
-          <nav className="ml-auto flex gap-4">
-            <Button
-              variant={currentPage === 'tasks' ? 'default' : 'ghost'}
-              onClick={() => onPageChange('tasks')}
-              className={`text-lg font-medium flex items-center gap-2 transition-all duration-300 ${
-                currentPage === 'tasks' 
-                  ? 'border-2 border-black text-black hover:bg-black hover:text-white' 
-                  : 'hover:bg-gray-100'
-              }`}
-            >
-              <CheckSquare className="h-5 w-5" />
-              Tasks
-            </Button>
-            <Button
-              variant={currentPage === 'companies' ? 'default' : 'ghost'}
-              onClick={() => onPageChange('companies')}
-              className={`text-lg font-medium flex items-center gap-2 transition-all duration-300 ${
-                currentPage === 'companies' 
-                  ? 'border-2 border-black text-black hover:bg-black hover:text-white' 
-                  : 'hover:bg-gray-100'
-              }`}
-            >
-              <Building2 className="h-5 w-5" />
-              Companies
-            </Button>
-            {onSave && (
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleSave}
-                className="ml-4 border-2 border-black text-black hover:bg-black hover:text-white transition-all duration-300 hover:scale-110"
+          <div className="flex items-center gap-4 ml-auto">
+            <nav className="flex items-center gap-6">
+              <button
+                onClick={() => onPageChange('tasks')}
+                className={`text-sm font-medium flex items-center gap-2 transition-all duration-300 ${
+                  currentPage === 'tasks' 
+                    ? 'border-2 border-black text-black hover:bg-black hover:text-white dark:border-white dark:text-white dark:hover:bg-white dark:hover:text-black' 
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                } px-4 py-2 rounded-md`}
               >
-                <Save className="h-5 w-5" />
-              </Button>
-            )}
-            <ExportDropdown tasks={tasks} companies={companies} />
-          </nav>
+                <CheckSquare className="h-4 w-4" />
+                Tasks
+              </button>
+              <button
+                onClick={() => onPageChange('companies')}
+                className={`text-sm font-medium flex items-center gap-2 transition-all duration-300 ${
+                  currentPage === 'companies' 
+                    ? 'border-2 border-black text-black hover:bg-black hover:text-white dark:border-white dark:text-white dark:hover:bg-white dark:hover:text-black' 
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                } px-4 py-2 rounded-md`}
+              >
+                <Building2 className="h-4 w-4" />
+                Companies
+              </button>
+            </nav>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <ExportDropdown tasks={tasks} companies={companies} />
+              <div className="flex items-center gap-2">
+                {isSaving ? (
+                  <div className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Save className="h-4 w-4 animate-spin" />
+                    Saving...
+                  </div>
+                ) : lastSaved ? (
+                  <div className="text-sm text-muted-foreground">
+                    Last saved {format(lastSaved, 'HH:mm:ss')}
+                  </div>
+                ) : null}
+                <Button
+                  onClick={onSave}
+                  className="gap-2 border-2 border-black text-black hover:bg-black hover:text-white transition-all duration-300 hover:scale-110 dark:border-white dark:text-white dark:hover:bg-white dark:hover:text-black"
+                  disabled={!onSave || isSaving}
+                >
+                  <Save className="h-4 w-4" />
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
       <main className="container py-8">

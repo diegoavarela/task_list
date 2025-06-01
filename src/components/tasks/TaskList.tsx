@@ -19,39 +19,37 @@ import {
 interface TaskListProps {
   tasks: Task[];
   companies: Company[];
-  onAddTask: (task: Task) => void;
-  onUpdateTask: (task: Task) => void;
-  onDeleteTask: (taskId: string) => void;
+  onTaskUpdate: (taskId: string, updates: Partial<Task>) => void;
+  onTaskDelete: (taskId: string) => void;
+  onTaskAdd: (task: Omit<Task, 'id' | 'createdAt'>) => void;
+  showAddTask: boolean;
+  setShowAddTask: (show: boolean) => void;
+  showCompleted: boolean;
+  setShowCompleted: (show: boolean) => void;
 }
 
 export function TaskList({
   tasks,
   companies,
-  onAddTask,
-  onUpdateTask,
-  onDeleteTask,
+  onTaskUpdate,
+  onTaskDelete,
+  onTaskAdd,
+  showAddTask,
+  setShowAddTask,
+  showCompleted,
+  setShowCompleted
 }: TaskListProps) {
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskCompany, setNewTaskCompany] = useState('');
   const [newTaskDate, setNewTaskDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [editingTask, setEditingTask] = useState<{ 
-    id: string; 
-    name: string; 
-    companyId: string;
-    date: string;
-    completed: boolean;
-    parentTaskId?: string;
-  } | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [showCompleted, setShowCompleted] = useState(false);
-  const [showAddTask, setShowAddTask] = useState(false);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
-  const [addingSubtaskTo, setAddingSubtaskTo] = useState<string | null>(null);
+  const [addingSubtask, setAddingSubtask] = useState<string | null>(null);
   const [newSubtaskName, setNewSubtaskName] = useState('');
-  const [newSubtaskCompany, setNewSubtaskCompany] = useState('');
   const { toast } = useToast();
 
   const filteredAndSortedTasks = useMemo(() => {
@@ -76,17 +74,14 @@ export function TaskList({
   }, [tasks, selectedCompany, sortOrder, showCompleted]);
 
   const handleAddTask = () => {
-    console.log('Adding task:', { name: newTaskName, company: newTaskCompany, date: newTaskDate });
     if (newTaskName.trim() && newTaskCompany) {
-      const newTask: Task = {
-        id: crypto.randomUUID(),
+      const newTask: Omit<Task, 'id' | 'createdAt'> = {
         name: newTaskName.trim(),
         companyId: newTaskCompany,
-        createdAt: new Date(newTaskDate),
         completed: false,
         subtasks: []
       };
-      onAddTask(newTask);
+      onTaskAdd(newTask);
       setNewTaskName('');
       setNewTaskCompany('');
       setNewTaskDate(format(new Date(), 'yyyy-MM-dd'));
@@ -94,39 +89,18 @@ export function TaskList({
         title: "Task added",
         description: "Your task has been added successfully.",
       });
-    } else {
-      console.log('Validation failed:', { 
-        hasName: !!newTaskName.trim(), 
-        hasCompany: !!newTaskCompany 
-      });
     }
   };
 
   const handleEditTask = () => {
     if (editingTask && editingTask.name.trim()) {
-      if (editingTask.parentTaskId) {
-        // Handle subtask update
-        handleUpdateSubtask(
-          editingTask.parentTaskId,
-          editingTask.id,
-          {
-            name: editingTask.name.trim(),
-            completed: editingTask.completed,
-            createdAt: new Date(editingTask.date)
-          }
-        );
-      } else {
-        // Handle main task update
-        const updatedTask: Task = {
-          id: editingTask.id,
-          name: editingTask.name.trim(),
-          companyId: editingTask.companyId,
-          createdAt: new Date(editingTask.date),
-          completed: editingTask.completed,
-          subtasks: tasks.find(t => t.id === editingTask.id)?.subtasks || []
-        };
-        onUpdateTask(updatedTask);
-      }
+      const updatedTask: Task = {
+        ...editingTask,
+        name: editingTask.name.trim(),
+        completed: editingTask.completed,
+        createdAt: new Date(editingTask.createdAt)
+      };
+      onTaskUpdate(editingTask.id, updatedTask);
       setEditingTask(null);
       toast({
         title: "Task updated",
@@ -142,7 +116,7 @@ export function TaskList({
 
   const confirmDeleteTask = () => {
     if (taskToDelete) {
-      onDeleteTask(taskToDelete);
+      onTaskDelete(taskToDelete);
       setDeleteDialogOpen(false);
       setTaskToDelete(null);
       toast({
@@ -165,7 +139,7 @@ export function TaskList({
       ...task,
       completed: !task.completed
     };
-    onUpdateTask(updatedTask);
+    onTaskUpdate(task.id, updatedTask);
   };
 
   const handleExportJSON = () => {
@@ -255,25 +229,31 @@ export function TaskList({
       const parentTask = tasks.find(t => t.id === parentTaskId);
       if (!parentTask) return;
 
-      const newSubtask: Task = {
-        id: crypto.randomUUID(),
+      const newSubtask = {
         name: newSubtaskName.trim(),
         companyId: parentTask.companyId,
-        createdAt: new Date(),
         completed: false,
         subtasks: [],
         parentTaskId
       };
       
-      const updatedTask: Task = {
+      const updatedTask = {
         ...parentTask,
-        subtasks: [...(parentTask.subtasks || []), newSubtask]
+        subtasks: [...(parentTask.subtasks || []), {
+          ...newSubtask,
+          id: crypto.randomUUID(),
+          createdAt: new Date()
+        }]
       };
       
-      onUpdateTask(updatedTask);
+      onTaskUpdate(parentTaskId, updatedTask);
       setNewSubtaskName('');
-      setAddingSubtaskTo(null);
+      setAddingSubtask(null);
       setExpandedTasks(prev => new Set([...prev, parentTaskId]));
+      toast({
+        title: "Subtask added",
+        description: "Your subtask has been added successfully.",
+      });
     }
   };
 
@@ -290,7 +270,7 @@ export function TaskList({
       subtasks: updatedSubtasks
     };
 
-    onUpdateTask(updatedTask);
+    onTaskUpdate(parentTaskId, updatedTask);
   };
 
   const handleDeleteSubtask = (parentTaskId: string, subtaskId: string) => {
@@ -303,7 +283,7 @@ export function TaskList({
       subtasks: updatedSubtasks
     };
 
-    onUpdateTask(updatedTask);
+    onTaskUpdate(parentTaskId, updatedTask);
   };
 
   const toggleSubtaskCompletion = (parentTaskId: string, subtaskId: string) => {
@@ -319,7 +299,7 @@ export function TaskList({
       subtasks: updatedSubtasks
     };
 
-    onUpdateTask(updatedTask);
+    onTaskUpdate(parentTaskId, updatedTask);
   };
 
   const renderTask = (task: Task, isSubtask: boolean = false) => (
@@ -381,7 +361,7 @@ export function TaskList({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setAddingSubtaskTo(task.id)}
+              onClick={() => setAddingSubtask(task.id)}
               className="hover:bg-gray-100 transition-all duration-300 hover:scale-110"
             >
               <Plus className="h-4 w-4" />
@@ -390,14 +370,7 @@ export function TaskList({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setEditingTask({ 
-              id: task.id, 
-              name: task.name, 
-              companyId: task.companyId,
-              date: format(new Date(task.createdAt), 'yyyy-MM-dd'),
-              completed: task.completed,
-              parentTaskId: isSubtask ? task.parentTaskId : undefined
-            })}
+            onClick={() => setEditingTask(task)}
             className={`hover:bg-gray-100 transition-all duration-300 hover:scale-110 ${isSubtask ? 'h-7 w-7' : ''}`}
           >
             <Edit2 className={`${isSubtask ? 'h-3 w-3' : 'h-4 w-4'}`} />
@@ -412,7 +385,7 @@ export function TaskList({
           </Button>
         </div>
       </div>
-      {!isSubtask && addingSubtaskTo === task.id && (
+      {!isSubtask && addingSubtask === task.id && (
         <div className="border-t p-4 bg-gray-50/50">
           <div className="flex items-center gap-4">
             <Input
@@ -424,7 +397,7 @@ export function TaskList({
                 if (e.key === 'Enter') {
                   handleAddSubtask(task.id);
                 } else if (e.key === 'Escape') {
-                  setAddingSubtaskTo(null);
+                  setAddingSubtask(null);
                   setNewSubtaskName('');
                 }
               }}
@@ -440,7 +413,7 @@ export function TaskList({
             <Button 
               variant="outline"
               onClick={() => {
-                setAddingSubtaskTo(null);
+                setAddingSubtask(null);
                 setNewSubtaskName('');
               }}
               className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
@@ -599,8 +572,11 @@ export function TaskList({
             )}
             <Input
               type="date"
-              value={editingTask?.date || ''}
-              onChange={(e) => setEditingTask(prev => prev ? { ...prev, date: e.target.value } : null)}
+              value={editingTask?.createdAt ? format(new Date(editingTask.createdAt), 'yyyy-MM-dd') : ''}
+              onChange={(e) => setEditingTask(prev => prev ? { 
+                ...prev, 
+                createdAt: new Date(e.target.value)
+              } : null)}
               className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
             />
             <div className="flex items-center gap-2">
