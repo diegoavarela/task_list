@@ -4,6 +4,12 @@ import { useToast } from '@/components/ui/use-toast';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -107,9 +113,9 @@ function ExportDropdown({ tasks, companies }: { tasks?: Task[], companies?: Comp
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
-          className="ml-4 border-2 border-black text-black hover:bg-black hover:text-white transition-all duration-300 hover:scale-110"
+          className="hover:bg-foreground hover:text-background transition-all duration-300 hover:scale-110"
         >
           <Download className="h-5 w-5" />
         </Button>
@@ -143,71 +149,129 @@ export function Layout({
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-20 items-center">
-          <div className="flex items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-8 w-8"
-            >
-              <path d="M9 11l3 3L22 4" />
-              <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
-            </svg>
-            <h1 className="text-2xl font-bold">The Freelo List</h1>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-8 w-8"
+              >
+                <path d="M9 11l3 3L22 4" />
+                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+              </svg>
+              <h1 className="text-2xl font-bold">The Freelo List</h1>
+            </div>
+            {lastSaved && (
+              <div className="text-xs text-muted-foreground mt-1">
+                Last saved {format(lastSaved, 'HH:mm:ss')}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-4 ml-auto">
             <nav className="flex items-center gap-6">
-              <button
-                onClick={() => onPageChange('tasks')}
-                className={`text-sm font-medium flex items-center gap-2 transition-all duration-300 ${
-                  currentPage === 'tasks' 
-                    ? 'border-2 border-foreground text-foreground hover:bg-foreground hover:text-background' 
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                } px-4 py-2 rounded-md`}
-              >
-                <CheckSquare className="h-4 w-4" />
-                Tasks
-              </button>
-              <button
-                onClick={() => onPageChange('companies')}
-                className={`text-sm font-medium flex items-center gap-2 transition-all duration-300 ${
-                  currentPage === 'companies' 
-                    ? 'border-2 border-foreground text-foreground hover:bg-foreground hover:text-background' 
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                } px-4 py-2 rounded-md`}
-              >
-                <Building2 className="h-4 w-4" />
-                Companies
-              </button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => onPageChange('tasks')}
+                      className={`text-sm font-medium flex items-center gap-2 transition-all duration-300 ${
+                        currentPage === 'tasks' 
+                          ? 'border-2 border-foreground text-foreground hover:bg-foreground hover:text-background' 
+                          : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                      } px-4 py-2 rounded-md`}
+                    >
+                      <CheckSquare className="h-4 w-4" />
+                      Tasks
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>View and manage tasks</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => onPageChange('companies')}
+                      className={`text-sm font-medium flex items-center gap-2 transition-all duration-300 ${
+                        currentPage === 'companies' 
+                          ? 'border-2 border-foreground text-foreground hover:bg-foreground hover:text-background' 
+                          : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                      } px-4 py-2 rounded-md`}
+                    >
+                      <Building2 className="h-4 w-4" />
+                      Companies
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Manage companies</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </nav>
             <div className="flex items-center gap-2">
-              <KeyboardShortcuts />
-              <ThemeToggle />
-              <ExportDropdown tasks={tasks} companies={companies} />
-              <div className="flex items-center gap-2">
-                {isSaving ? (
-                  <div className="text-sm text-muted-foreground flex items-center gap-2">
-                    <Save className="h-4 w-4 animate-spin" />
-                    Saving...
-                  </div>
-                ) : lastSaved ? (
-                  <div className="text-sm text-muted-foreground">
-                    Last saved {format(lastSaved, 'HH:mm:ss')}
-                  </div>
-                ) : null}
-                <Button
-                  onClick={onSave}
-                  className="gap-2 border-2 border-foreground text-foreground hover:bg-foreground hover:text-background transition-all duration-300 hover:scale-110"
-                  disabled={!onSave || isSaving}
-                >
-                  <Save className="h-4 w-4" />
-                  Save Changes
-                </Button>
-              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <KeyboardShortcuts />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Keyboard shortcuts</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <ThemeToggle />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Toggle theme</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <ExportDropdown tasks={tasks} companies={companies} />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Export data</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={onSave}
+                      variant="ghost"
+                      size="icon"
+                      className="hover:bg-foreground hover:text-background transition-all duration-300 hover:scale-110"
+                      disabled={!onSave || isSaving}
+                    >
+                      {isSaving ? (
+                        <Save className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Save changes</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         </div>

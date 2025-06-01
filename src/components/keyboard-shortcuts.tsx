@@ -28,9 +28,9 @@ export function KeyboardShortcuts() {
     <Dialog>
       <DialogTrigger asChild>
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
-          className="border-2 border-foreground text-foreground hover:bg-foreground hover:text-background transition-all duration-300 hover:scale-110"
+          className="hover:bg-foreground hover:text-background transition-all duration-300 hover:scale-110"
           title="Keyboard shortcuts"
         >
           <Keyboard className="h-5 w-5" />
