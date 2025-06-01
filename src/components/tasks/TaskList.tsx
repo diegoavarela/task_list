@@ -404,7 +404,7 @@ export function TaskList({
             />
             <Button 
               onClick={() => handleAddSubtask(task.id)}
-              className="border-2 border-black text-black hover:bg-black hover:text-white h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
+              className="border-2 border-foreground text-foreground hover:bg-foreground hover:text-background h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
               type="button"
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -436,7 +436,7 @@ export function TaskList({
   return (
     <div className="space-y-8">
       <Card className="rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01]">
-        <CardHeader className="bg-gradient-to-r from-gray-50 to-white rounded-t-lg">
+        <CardHeader className="bg-gradient-to-r from-background to-background/95 rounded-t-lg border-b">
           <div className="flex items-center justify-between">
             <CardTitle>Tasks</CardTitle>
             <div className="flex items-center gap-4">
@@ -444,7 +444,7 @@ export function TaskList({
                 variant="outline"
                 onClick={() => setShowAddTask(!showAddTask)}
                 className={`flex items-center gap-2 h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400 hover:scale-[1.02] ${
-                  showAddTask ? 'bg-black text-white hover:bg-black/90' : ''
+                  showAddTask ? 'bg-foreground text-background hover:bg-foreground/90' : ''
                 }`}
               >
                 <Plus className="h-4 w-4" />
@@ -492,10 +492,10 @@ export function TaskList({
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <div className="space-y-4">
             {showAddTask && (
-              <div className="rounded-lg border bg-card shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400 hover:scale-[1.01] hover:bg-gray-50/50">
+              <div className="rounded-lg border bg-card shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400 hover:scale-[1.01] hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
                 <div className="p-4">
                   <div className="flex flex-col gap-4">
                     <Input
@@ -528,7 +528,7 @@ export function TaskList({
                           handleAddTask();
                           setShowAddTask(false);
                         }}
-                        className="border-2 border-black text-black hover:bg-black hover:text-white h-12 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
+                        className="border-2 border-foreground text-foreground hover:bg-foreground hover:text-background h-12 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
                         type="button"
                       >
                         <Plus className="mr-2 h-4 w-4" />
@@ -599,7 +599,7 @@ export function TaskList({
             </Button>
             <Button 
               onClick={handleEditTask}
-              className="border-2 border-black text-black hover:bg-black hover:text-white transition-all duration-300 hover:scale-[1.02]"
+              className="border-2 border-foreground text-foreground hover:bg-foreground hover:text-background transition-all duration-300 hover:scale-[1.02]"
             >
               Save Changes
             </Button>
