@@ -10,37 +10,17 @@ import { Toaster } from "@/components/ui/toaster"
 
 type Page = 'tasks' | 'companies';
 
-export function App() {
+export default function App() {
+  const [currentPage, setCurrentPage] = useState<Page>('tasks');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [currentPage, setCurrentPage] = useState<Page>('tasks');
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Load data from localStorage on mount
   useEffect(() => {
-    try {
-      const loadedTasks = loadTasks();
-      const loadedCompanies = loadCompanies();
-      
-      // Convert string dates back to Date objects
-      setTasks(loadedTasks.map(task => ({
-        ...task,
-        createdAt: new Date(task.createdAt),
-        subtasks: task.subtasks.map(subtask => ({
-          ...subtask,
-          createdAt: new Date(subtask.createdAt),
-          subtasks: []
-        }))
-      })));
-      
-      setCompanies(loadedCompanies.map(company => ({
-        ...company,
-        createdAt: new Date(company.createdAt)
-      })));
-    } catch (error) {
-      console.error('Error loading data:', error);
-      setSaveError('Failed to load saved data. Please try refreshing the page.');
-    }
+    const loadedTasks = loadTasks();
+    const loadedCompanies = loadCompanies();
+    setTasks(loadedTasks);
+    setCompanies(loadedCompanies);
   }, []);
 
   const handleSave = () => {
@@ -48,71 +28,65 @@ export function App() {
       saveTasks(tasks);
       saveCompanies(companies);
       setSaveError(null);
-      console.log('Data saved successfully');
     } catch (error) {
-      console.error('Error saving data:', error);
-      setSaveError('Failed to save data. Please check your browser settings.');
+      setSaveError('Failed to save changes. Please try again.');
     }
   };
 
   const handleAddTask = (task: Task) => {
-    setTasks([...tasks, task]);
+    setTasks(prev => [...prev, task]);
   };
 
   const handleUpdateTask = (updatedTask: Task) => {
-    setTasks(tasks.map(task => task.id === updatedTask.id ? updatedTask : task));
+    setTasks(prev => prev.map(task => 
+      task.id === updatedTask.id ? updatedTask : task
+    ));
   };
 
   const handleDeleteTask = (taskId: string) => {
-    setTasks(tasks.filter(task => task.id !== taskId));
+    setTasks(prev => prev.filter(task => task.id !== taskId));
   };
 
   const handleAddCompany = (company: Company) => {
-    setCompanies([...companies, company]);
-  };
-
-  const handleDeleteCompany = (companyId: string) => {
-    setCompanies(companies.filter(company => company.id !== companyId));
-    // Unassign tasks from deleted company
-    setTasks(tasks.map(task => 
-      task.companyId === companyId 
-        ? { ...task, companyId: '' }
-        : task
-    ));
+    setCompanies(prev => [...prev, company]);
   };
 
   const handleUpdateCompany = (updatedCompany: Company) => {
-    setCompanies(companies.map(company => 
+    setCompanies(prev => prev.map(company => 
       company.id === updatedCompany.id ? updatedCompany : company
     ));
+  };
+
+  const handleDeleteCompany = (companyId: string) => {
+    setCompanies(prev => prev.filter(company => company.id !== companyId));
   };
 
   return (
     <>
       <Layout 
         currentPage={currentPage} 
-        onPageChange={setCurrentPage}
+        onPageChange={setCurrentPage} 
         onSave={handleSave}
         saveError={saveError}
+        tasks={tasks}
+        companies={companies}
       >
-        <div className="space-y-4">
-          {currentPage === 'tasks' ? (
-            <TaskList
-              tasks={tasks}
-              companies={companies}
-              onAddTask={handleAddTask}
-              onUpdateTask={handleUpdateTask}
-              onDeleteTask={handleDeleteTask}
-            />
-          ) : (
-            <CompanyConfig
-              companies={companies}
-              onAddCompany={handleAddCompany}
-              onUpdateCompany={handleUpdateCompany}
-              onDeleteCompany={handleDeleteCompany}
-            />
-          )}
-        </div>
+        {currentPage === 'tasks' ? (
+          <TaskList
+            tasks={tasks}
+            companies={companies}
+            onAddTask={handleAddTask}
+            onUpdateTask={handleUpdateTask}
+            onDeleteTask={handleDeleteTask}
+          />
+        ) : (
+          <CompanyConfig
+            companies={companies}
+            onAddCompany={handleAddCompany}
+            onUpdateCompany={handleUpdateCompany}
+            onDeleteCompany={handleDeleteCompany}
+          />
+        )}
       </Layout>
       <Toaster />
     </>

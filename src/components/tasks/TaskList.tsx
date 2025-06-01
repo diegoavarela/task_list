@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download } from 'lucide-react';
 import type { Task } from '../../types/task';
 import type { Company } from '../../types/company';
 import { Button } from '@/components/ui/button';
@@ -142,11 +142,83 @@ export function TaskList({
     onUpdateTask(updatedTask);
   };
 
+  const handleExportJSON = () => {
+    const data = {
+      tasks,
+      companies,
+      exportedAt: new Date().toISOString()
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `task-list-export-${format(new Date(), 'yyyy-MM-dd')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export successful",
+      description: "Your data has been exported as JSON.",
+    });
+  };
+
+  const handleExportCSV = () => {
+    // Prepare tasks CSV
+    const taskHeaders = ['ID', 'Name', 'Company', 'Created At', 'Completed', 'Parent Task ID'];
+    const taskRows = tasks.map(task => [
+      task.id,
+      task.name,
+      getCompanyName(task.companyId),
+      format(new Date(task.createdAt), 'yyyy-MM-dd HH:mm:ss'),
+      task.completed ? 'Yes' : 'No',
+      task.parentTaskId || ''
+    ]);
+
+    // Prepare companies CSV
+    const companyHeaders = ['ID', 'Name', 'Created At', 'Color'];
+    const companyRows = companies.map(company => [
+      company.id,
+      company.name,
+      format(new Date(company.createdAt), 'yyyy-MM-dd HH:mm:ss'),
+      company.color
+    ]);
+
+    // Combine both CSVs
+    const csvContent = [
+      'TASKS',
+      taskHeaders.join(','),
+      ...taskRows.map(row => row.join(',')),
+      '\nCOMPANIES',
+      companyHeaders.join(','),
+      ...companyRows.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `task-list-export-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export successful",
+      description: "Your data has been exported as CSV.",
+    });
+  };
+
   return (
     <div className="space-y-8">
       <Card className="rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01]">
         <CardHeader className="bg-gradient-to-r from-gray-50 to-white rounded-t-lg">
-          <CardTitle>Add New Task</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Add New Task</CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4">

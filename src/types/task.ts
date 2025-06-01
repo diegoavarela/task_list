@@ -5,4 +5,5 @@ export interface Task {
   createdAt: Date;
   completed: boolean;
   subtasks?: Task[];
+  parentTaskId?: string;
 } 
