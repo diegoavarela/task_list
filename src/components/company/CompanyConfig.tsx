@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PlusCircle, Trash2, Edit2, X } from 'lucide-react';
+import { Plus, Trash2, Edit2, X } from 'lucide-react';
 import type { Company } from '../../types/company';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -105,9 +105,16 @@ export function CompanyConfig({ companies, onAddCompany, onUpdateCompany, onDele
               onChange={(e) => setNewCompanyName(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Enter company name"
-              className="flex-1"
+              className="flex-1 h-10"
             />
-            <Button onClick={handleAddCompany}>Add Company</Button>
+            <Button 
+              onClick={handleAddCompany} 
+              className="border-2 border-black text-black hover:bg-black hover:text-white h-10"
+              type="button"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Company
+            </Button>
           </div>
 
           <div className="space-y-2">

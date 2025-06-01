@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown } from 'lucide-react';
 import type { Task } from '../../types/task';
 import type { Company } from '../../types/company';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface TaskListProps {
   tasks: Task[];
@@ -36,7 +43,25 @@ export function TaskList({
   } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [selectedCompany, setSelectedCompany] = useState<string>('all');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const { toast } = useToast();
+
+  const filteredAndSortedTasks = useMemo(() => {
+    let filtered = tasks;
+
+    // Filter by company
+    if (selectedCompany !== 'all') {
+      filtered = filtered.filter(task => task.companyId === selectedCompany);
+    }
+
+    // Sort by date
+    return [...filtered].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    });
+  }, [tasks, selectedCompany, sortOrder]);
 
   const handleAddTask = () => {
     console.log('Adding task:', { name: newTaskName, company: newTaskCompany, date: newTaskDate });
@@ -157,132 +182,166 @@ export function TaskList({
         </CardContent>
       </Card>
 
-      <div className="space-y-4">
-        {tasks.map((task) => (
-          <div key={task.id} className="rounded-lg border bg-card">
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => toggleTaskCompletion(task)}
-                  className="p-1 hover:bg-accent rounded-md"
-                >
-                  {task.completed ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </button>
-                <div 
-                  className="flex flex-col cursor-pointer hover:text-primary"
-                  onClick={() => setEditingTask({ 
-                    id: task.id, 
-                    name: task.name, 
-                    companyId: task.companyId,
-                    date: format(new Date(task.createdAt), 'yyyy-MM-dd'),
-                    completed: task.completed
-                  })}
-                >
-                  <span className={`text-lg ${task.completed ? 'line-through text-muted-foreground' : ''}`}>{task.name}</span>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Building2 className="h-3 w-3" />
-                    <span>{getCompanyName(task.companyId)}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
-                  {format(new Date(task.createdAt), 'MMM d, yyyy')}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setEditingTask({ 
-                    id: task.id, 
-                    name: task.name, 
-                    companyId: task.companyId,
-                    date: format(new Date(task.createdAt), 'yyyy-MM-dd'),
-                    completed: task.completed
-                  })}
-                >
-                  <Edit2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDeleteTask(task.id)}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Tasks</CardTitle>
+            <div className="flex items-center gap-4">
+              <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Filter by company" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Companies</SelectItem>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                className="flex items-center gap-2"
+              >
+                <Calendar className="h-4 w-4" />
+                {sortOrder === 'asc' ? 'Oldest First' : 'Newest First'}
+                <ChevronDown className={`h-4 w-4 transition-transform ${sortOrder === 'desc' ? 'rotate-180' : ''}`} />
+              </Button>
             </div>
-            {task.subtasks && task.subtasks.length > 0 && (
-              <div className="border-t p-4">
-                <div className="space-y-2">
-                  {task.subtasks.map((subtask) => (
-                    <div key={subtask.id} className="flex items-center justify-between pl-8">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => toggleTaskCompletion(subtask)}
-                          className="p-1 hover:bg-accent rounded-md"
-                        >
-                          {subtask.completed ? (
-                            <CheckCircle2 className="h-5 w-5 text-green-500" />
-                          ) : (
-                            <Circle className="h-5 w-5 text-muted-foreground" />
-                          )}
-                        </button>
-                        <div 
-                          className="flex flex-col cursor-pointer hover:text-primary"
-                          onClick={() => setEditingTask({ 
-                            id: subtask.id, 
-                            name: subtask.name, 
-                            companyId: subtask.companyId,
-                            date: format(new Date(subtask.createdAt), 'yyyy-MM-dd'),
-                            completed: subtask.completed
-                          })}
-                        >
-                          <span className={`text-lg ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}>{subtask.name}</span>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Building2 className="h-3 w-3" />
-                            <span>{getCompanyName(subtask.companyId)}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Calendar className="h-4 w-4" />
-                          {format(new Date(subtask.createdAt), 'MMM d, yyyy')}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setEditingTask({ 
-                            id: subtask.id, 
-                            name: subtask.name, 
-                            companyId: subtask.companyId,
-                            date: format(new Date(subtask.createdAt), 'yyyy-MM-dd'),
-                            completed: subtask.completed
-                          })}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteTask(subtask.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {filteredAndSortedTasks.map((task) => (
+              <div key={task.id} className="rounded-lg border bg-card">
+                <div className="flex items-center justify-between p-4">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => toggleTaskCompletion(task)}
+                      className="p-1 hover:bg-accent rounded-md"
+                    >
+                      {task.completed ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <Circle className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </button>
+                    <div 
+                      className="flex flex-col cursor-pointer hover:text-primary"
+                      onClick={() => setEditingTask({ 
+                        id: task.id, 
+                        name: task.name, 
+                        companyId: task.companyId,
+                        date: format(new Date(task.createdAt), 'yyyy-MM-dd'),
+                        completed: task.completed
+                      })}
+                    >
+                      <span className={`text-lg ${task.completed ? 'line-through text-muted-foreground' : ''}`}>{task.name}</span>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Building2 className="h-3 w-3" />
+                        <span>{getCompanyName(task.companyId)}</span>
                       </div>
                     </div>
-                  ))}
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      {format(new Date(task.createdAt), 'MMM d, yyyy')}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setEditingTask({ 
+                        id: task.id, 
+                        name: task.name, 
+                        companyId: task.companyId,
+                        date: format(new Date(task.createdAt), 'yyyy-MM-dd'),
+                        completed: task.completed
+                      })}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteTask(task.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
+                {task.subtasks && task.subtasks.length > 0 && (
+                  <div className="border-t p-4">
+                    <div className="space-y-2">
+                      {task.subtasks.map((subtask) => (
+                        <div key={subtask.id} className="flex items-center justify-between pl-8">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => toggleTaskCompletion(subtask)}
+                              className="p-1 hover:bg-accent rounded-md"
+                            >
+                              {subtask.completed ? (
+                                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                              ) : (
+                                <Circle className="h-5 w-5 text-muted-foreground" />
+                              )}
+                            </button>
+                            <div 
+                              className="flex flex-col cursor-pointer hover:text-primary"
+                              onClick={() => setEditingTask({ 
+                                id: subtask.id, 
+                                name: subtask.name, 
+                                companyId: subtask.companyId,
+                                date: format(new Date(subtask.createdAt), 'yyyy-MM-dd'),
+                                completed: subtask.completed
+                              })}
+                            >
+                              <span className={`text-lg ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}>{subtask.name}</span>
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <Building2 className="h-3 w-3" />
+                                <span>{getCompanyName(subtask.companyId)}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Calendar className="h-4 w-4" />
+                              {format(new Date(subtask.createdAt), 'MMM d, yyyy')}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setEditingTask({ 
+                                id: subtask.id, 
+                                name: subtask.name, 
+                                companyId: subtask.companyId,
+                                date: format(new Date(subtask.createdAt), 'yyyy-MM-dd'),
+                                completed: subtask.completed
+                              })}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteTask(subtask.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            ))}
           </div>
-        ))}
-      </div>
+        </CardContent>
+      </Card>
 
       <Dialog open={!!editingTask} onOpenChange={() => setEditingTask(null)}>
         <DialogContent>
