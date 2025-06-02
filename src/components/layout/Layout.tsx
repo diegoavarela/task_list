@@ -220,10 +220,12 @@ export function Layout({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <KeyboardShortcuts />
+                    <div>
+                      <KeyboardShortcuts />
+                    </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Keyboard shortcuts</p>
+                    <p>View keyboard shortcuts</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -231,44 +233,46 @@ export function Layout({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <ThemeToggle />
+                    <div>
+                      <ThemeToggle />
+                    </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Toggle theme</p>
+                    <p>Toggle light/dark mode</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
 
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <ExportDropdown tasks={tasks} companies={companies} />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Export data</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              {onSave && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={onSave}
+                        disabled={isSaving}
+                        className="hover:bg-foreground hover:text-background transition-all duration-300 hover:scale-110"
+                      >
+                        <Save className="h-5 w-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Save changes</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
 
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      onClick={onSave}
-                      variant="ghost"
-                      size="icon"
-                      className="hover:bg-foreground hover:text-background transition-all duration-300 hover:scale-110"
-                      disabled={!onSave || isSaving}
-                    >
-                      {isSaving ? (
-                        <Save className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Save className="h-4 w-4" />
-                      )}
-                    </Button>
+                    <div>
+                      <ExportDropdown tasks={tasks} companies={companies} />
+                    </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Save changes</p>
+                    <p>Export data (JSON/CSV)</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -276,7 +280,7 @@ export function Layout({
           </div>
         </div>
       </header>
-      <main className="container py-8">
+      <main className="container py-8 mt-4">
         {saveError && (
           <div className="mb-4 p-4 rounded-lg bg-destructive/10 text-destructive">
             <p>{saveError}</p>

@@ -5,6 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface CompanyConfigProps {
   companies: Company[];
@@ -170,19 +176,40 @@ export function CompanyConfig({ companies, onAddCompany, onUpdateCompany, onDele
               className="flex-1 h-10"
             />
             <div className="flex items-center gap-2">
-              <ColorPicker
-                value={newCompanyColor}
-                onChange={setNewCompanyColor}
-                className="w-10 h-10"
-              />
-              <Button 
-                onClick={handleAddCompany} 
-                className="border-2 border-black text-black hover:bg-black hover:text-white h-10"
-                type="button"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Company
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <ColorPicker
+                        value={newCompanyColor}
+                        onChange={setNewCompanyColor}
+                        className="w-10 h-10"
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Choose company color</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      onClick={handleAddCompany} 
+                      className="border-2 border-foreground text-foreground hover:bg-foreground hover:text-background h-10"
+                      type="button"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Company
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Add new company</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
 
@@ -208,32 +235,63 @@ export function CompanyConfig({ companies, onAddCompany, onUpdateCompany, onDele
                         className="h-8 w-48"
                         autoFocus
                       />
-                      <ColorPicker
-                        value={editingColor}
-                        onChange={setEditingColor}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCompanyEdit(company);
-                        }}
-                        className="hover:bg-green-50 transition-all duration-300 hover:scale-110"
-                      >
-                        <Check className="h-4 w-4 text-green-600" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCancelEdit();
-                        }}
-                        className="hover:bg-gray-100 transition-all duration-300 hover:scale-110"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div>
+                              <ColorPicker
+                                value={editingColor}
+                                onChange={setEditingColor}
+                              />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Change company color</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCompanyEdit(company);
+                              }}
+                              className="hover:bg-green-50 transition-all duration-300 hover:scale-110"
+                            >
+                              <Check className="h-4 w-4 text-green-600" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Save changes</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCancelEdit();
+                              }}
+                              className="hover:bg-gray-100 transition-all duration-300 hover:scale-110"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Cancel editing</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                   ) : (
                     <span className="text-sm font-medium group-hover:text-primary transition-colors duration-300">
@@ -241,18 +299,26 @@ export function CompanyConfig({ companies, onAddCompany, onUpdateCompany, onDele
                     </span>
                   )}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteClick(company.id);
-                  }}
-                  aria-label="Delete"
-                  className="hover:bg-red-50 transition-all duration-300 hover:scale-110 hover:shadow-md"
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClick(company.id);
+                        }}
+                        className="hover:bg-red-50 transition-all duration-300 hover:scale-110"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Delete company</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             ))}
           </div>

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical } from 'lucide-react';
+import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical, Check } from 'lucide-react';
 import type { Task } from '../../types/task';
 import type { Company } from '../../types/company';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface TaskListProps {
   tasks: Task[];
@@ -94,7 +95,9 @@ function SortableTask({
   return (
     <div ref={setNodeRef} style={style} className="space-y-2">
       <div 
-        className="flex items-center justify-between p-4 rounded-lg border bg-card shadow-sm hover:shadow-xl transition-all duration-300 hover:border-gray-400 hover:scale-[1.02] hover:bg-gray-50/80 cursor-pointer group"
+        className={`flex items-center justify-between p-4 rounded-lg border bg-card shadow-sm hover:shadow-xl transition-all duration-300 hover:border-gray-400 hover:scale-[1.02] hover:bg-gray-50/80 cursor-pointer group ${
+          task.completed ? 'animate-complete' : ''
+        }`}
         onClick={(e) => {
           if (!(e.target as HTMLElement).closest('button')) {
             if (!isSubtask && task.subtasks && task.subtasks.length > 0) {
@@ -139,31 +142,32 @@ function SortableTask({
             </TooltipProvider>
           )}
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleCompletion(task);
-                  }}
-                  className="hover:scale-110 transition-all duration-300"
-                >
-                  {task.completed ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{task.completed ? 'Mark as incomplete' : 'Mark as complete'}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div
+            className={cn(
+              "flex items-center gap-2 p-2 rounded-lg transition-colors",
+              task.completed && "animate-complete"
+            )}
+          >
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleCompletion(task);
+              }}
+              className={cn(
+                "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
+                task.completed
+                  ? "border-green-500 bg-green-500"
+                  : "border-gray-300 hover:border-gray-400"
+              )}
+            >
+              {task.completed && (
+                <Check className="w-3 h-3 text-white animate-check" />
+              )}
+            </button>
+          </div>
 
           <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>
+            <span className={`text-sm font-medium transition-all duration-300 ${task.completed ? 'line-through text-gray-500' : ''}`}>
               {task.name}
             </span>
             {!isSubtask && (

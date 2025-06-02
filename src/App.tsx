@@ -101,19 +101,40 @@ export default function App() {
   };
 
   const handleUpdateTask = (taskId: string, updates: Partial<Task>) => {
-    setTasks(prev => prev.map(task => {
-      if (task.id === taskId) {
-        return { ...task, ...updates };
+    setTasks(prev => {
+      // If we're updating the order, we need to reorder the entire array
+      if (updates.order !== undefined) {
+        const taskToUpdate = prev.find(t => t.id === taskId);
+        if (!taskToUpdate) return prev;
+
+        // Remove the task from its current position
+        const filteredTasks = prev.filter(t => t.id !== taskId);
+        
+        // Insert the task at its new position
+        const newTasks = [
+          ...filteredTasks.slice(0, updates.order),
+          { ...taskToUpdate, ...updates },
+          ...filteredTasks.slice(updates.order)
+        ];
+
+        return newTasks;
       }
-      // Check if this task has subtasks that need to be updated
-      if (task.subtasks) {
-        const updatedSubtasks = task.subtasks.map(subtask => 
-          subtask.id === taskId ? { ...subtask, ...updates } : subtask
-        );
-        return { ...task, subtasks: updatedSubtasks };
-      }
-      return task;
-    }));
+
+      // For other updates, update the task in place
+      return prev.map(task => {
+        if (task.id === taskId) {
+          return { ...task, ...updates };
+        }
+        // Check if this task has subtasks that need to be updated
+        if (task.subtasks) {
+          const updatedSubtasks = task.subtasks.map(subtask => 
+            subtask.id === taskId ? { ...subtask, ...updates } : subtask
+          );
+          return { ...task, subtasks: updatedSubtasks };
+        }
+        return task;
+      });
+    });
   };
 
   const handleDeleteTask = (taskId: string) => {

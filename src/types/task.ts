@@ -6,4 +6,5 @@ export interface Task {
   completed: boolean;
   subtasks?: Task[];
   parentTaskId?: string;
+  order?: number;
 } 
