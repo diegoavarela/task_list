@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X } from 'lucide-react';
+import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical } from 'lucide-react';
 import type { Task } from '../../types/task';
 import type { Company } from '../../types/company';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,23 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   Select,
   SelectContent,
@@ -34,6 +51,206 @@ interface TaskListProps {
   setShowCompleted: (show: boolean) => void;
 }
 
+interface SortableTaskProps {
+  task: Task;
+  isSubtask: boolean;
+  onToggleExpansion: (taskId: string) => void;
+  onToggleCompletion: (task: Task) => void;
+  onEdit: (task: Task) => void;
+  onDelete: (taskId: string) => void;
+  onAddSubtask: (taskId: string) => void;
+  expandedTasks: Set<string>;
+  getCompanyName: (companyId: string) => string;
+  getCompanyColor: (companyId: string) => string;
+}
+
+function SortableTask({
+  task,
+  isSubtask,
+  onToggleExpansion,
+  onToggleCompletion,
+  onEdit,
+  onDelete,
+  onAddSubtask,
+  expandedTasks,
+  getCompanyName,
+  getCompanyColor,
+}: SortableTaskProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="space-y-2">
+      <div 
+        className="flex items-center justify-between p-4 rounded-lg border bg-card shadow-sm hover:shadow-xl transition-all duration-300 hover:border-gray-400 hover:scale-[1.02] hover:bg-gray-50/80 cursor-pointer group"
+        onClick={(e) => {
+          if (!(e.target as HTMLElement).closest('button')) {
+            if (!isSubtask && task.subtasks && task.subtasks.length > 0) {
+              onToggleExpansion(task.id);
+            } else {
+              onEdit(task);
+            }
+          }
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <button
+            {...attributes}
+            {...listeners}
+            className="hover:scale-110 transition-all duration-300 cursor-grab active:cursor-grabbing"
+          >
+            <GripVertical className="h-4 w-4 text-gray-400" />
+          </button>
+
+          {!isSubtask && task.subtasks && task.subtasks.length > 0 && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleExpansion(task.id);
+                    }}
+                    className="hover:scale-110 transition-all duration-300"
+                  >
+                    {expandedTasks.has(task.id) ? (
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-gray-500" />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{expandedTasks.has(task.id) ? 'Collapse subtasks' : 'Expand subtasks'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleCompletion(task);
+                  }}
+                  className="hover:scale-110 transition-all duration-300"
+                >
+                  {task.completed ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <Circle className="h-5 w-5 text-gray-400" />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{task.completed ? 'Mark as incomplete' : 'Mark as complete'}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>
+              {task.name}
+            </span>
+            {!isSubtask && (
+              <div 
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
+                style={{ 
+                  backgroundColor: `${getCompanyColor(task.companyId)}20`,
+                  color: getCompanyColor(task.companyId),
+                  border: `1px solid ${getCompanyColor(task.companyId)}40`
+                }}
+              >
+                <Building2 className="h-3 w-3" />
+                <span>{getCompanyName(task.companyId)}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Calendar className="h-3 w-3" />
+              {format(new Date(task.createdAt), 'MMM d, yyyy')}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {!isSubtask && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAddSubtask(task.id);
+                    }}
+                    className="hover:scale-110 transition-all duration-300"
+                  >
+                    <Plus className="h-4 w-4 text-gray-500" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Add subtask</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(task);
+                  }}
+                  className="hover:scale-110 transition-all duration-300"
+                >
+                  <Edit2 className="h-4 w-4 text-gray-500" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Edit task</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(task.id);
+                  }}
+                  className="hover:scale-110 transition-all duration-300"
+                >
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Delete task</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function TaskList({
   tasks,
   companies,
@@ -58,6 +275,13 @@ export function TaskList({
   const [newSubtaskName, setNewSubtaskName] = useState('');
   const { toast } = useToast();
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   const filteredAndSortedTasks = useMemo(() => {
     let filtered = tasks;
 
@@ -71,8 +295,11 @@ export function TaskList({
       filtered = filtered.filter(task => !task.completed);
     }
 
-    // Sort by date
+    // Sort by order if it exists, otherwise by date
     return [...filtered].sort((a, b) => {
+      if (a.order !== undefined && b.order !== undefined) {
+        return a.order - b.order;
+      }
       const dateA = new Date(a.createdAt).getTime();
       const dateB = new Date(b.createdAt).getTime();
       return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
@@ -308,218 +535,64 @@ export function TaskList({
     onTaskUpdate(parentTaskId, updatedTask);
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const oldIndex = filteredAndSortedTasks.findIndex((task) => task.id === active.id);
+      const newIndex = filteredAndSortedTasks.findIndex((task) => task.id === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        // Create a new array with the reordered tasks
+        const newTasks = arrayMove(filteredAndSortedTasks, oldIndex, newIndex);
+        
+        // Update each task's order in the parent component
+        newTasks.forEach((task, index) => {
+          onTaskUpdate(task.id, { order: index });
+        });
+      }
+    }
+  };
+
+  const handleSubtaskDragEnd = (parentTaskId: string, event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const parentTask = tasks.find(t => t.id === parentTaskId);
+      if (!parentTask || !parentTask.subtasks) return;
+
+      const oldIndex = parentTask.subtasks.findIndex((subtask) => subtask.id === active.id);
+      const newIndex = parentTask.subtasks.findIndex((subtask) => subtask.id === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newSubtasks = arrayMove(parentTask.subtasks, oldIndex, newIndex);
+        const updatedTask = {
+          ...parentTask,
+          subtasks: newSubtasks.map((subtask, index) => ({
+            ...subtask,
+            order: index
+          }))
+        };
+        
+        onTaskUpdate(parentTaskId, updatedTask);
+      }
+    }
+  };
+
   const renderTask = (task: Task, isSubtask: boolean = false) => (
-    <div key={task.id} className="space-y-2">
-      <div 
-        className="flex items-center justify-between p-4 rounded-lg border bg-card shadow-sm hover:shadow-xl transition-all duration-300 hover:border-gray-400 hover:scale-[1.02] hover:bg-gray-50/80 cursor-pointer group"
-        onClick={(e) => {
-          // Only handle click if it's not on a button
-          if (!(e.target as HTMLElement).closest('button')) {
-            if (!isSubtask && task.subtasks && task.subtasks.length > 0) {
-              toggleTaskExpansion(task.id);
-            } else {
-              setEditingTask(task);
-            }
-          }
-        }}
-      >
-        <div className="flex items-center gap-3">
-          {!isSubtask && task.subtasks && task.subtasks.length > 0 && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleTaskExpansion(task.id);
-                    }}
-                    className="hover:scale-110 transition-all duration-300"
-                  >
-                    {expandedTasks.has(task.id) ? (
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-gray-500" />
-                    )}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{expandedTasks.has(task.id) ? 'Collapse subtasks' : 'Expand subtasks'}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleTaskCompletion(task);
-                  }}
-                  className="hover:scale-110 transition-all duration-300"
-                >
-                  {task.completed ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{task.completed ? 'Mark as incomplete' : 'Mark as complete'}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>
-              {task.name}
-            </span>
-            {!isSubtask && (
-              <div 
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
-                style={{ 
-                  backgroundColor: `${getCompanyColor(task.companyId)}20`,
-                  color: getCompanyColor(task.companyId),
-                  border: `1px solid ${getCompanyColor(task.companyId)}40`
-                }}
-              >
-                <Building2 className="h-3 w-3" />
-                <span>{getCompanyName(task.companyId)}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Calendar className="h-3 w-3" />
-              {format(new Date(task.createdAt), 'MMM d, yyyy')}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {!isSubtask && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setAddingSubtask(task.id);
-                    }}
-                    className="hover:scale-110 transition-all duration-300"
-                  >
-                    <Plus className="h-4 w-4 text-gray-500" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Add subtask</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setEditingTask(task);
-                  }}
-                  className="hover:scale-110 transition-all duration-300"
-                >
-                  <Edit2 className="h-4 w-4 text-gray-500" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Edit task</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteTask(task.id);
-                  }}
-                  className="hover:scale-110 transition-all duration-300"
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Delete task</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </div>
-
-      {!isSubtask && expandedTasks.has(task.id) && task.subtasks && task.subtasks.length > 0 && (
-        <div className="ml-8 space-y-2">
-          {task.subtasks.map(subtask => renderTask(subtask, true))}
-        </div>
-      )}
-
-      {!isSubtask && addingSubtask === task.id && (
-        <div className="ml-8 flex items-center gap-2">
-          <Input
-            type="text"
-            value={newSubtaskName}
-            onChange={(e) => setNewSubtaskName(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                handleAddSubtask(task.id);
-              }
-            }}
-            placeholder="Enter subtask name"
-            className="flex-1"
-            autoFocus
-          />
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleAddSubtask(task.id)}
-                  className="hover:bg-green-50 transition-all duration-300 hover:scale-110"
-                >
-                  <Plus className="h-4 w-4 text-green-600" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Add subtask</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setAddingSubtask(null);
-                    setNewSubtaskName('');
-                  }}
-                  className="hover:bg-gray-100 transition-all duration-300 hover:scale-110"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Cancel</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      )}
-    </div>
+    <SortableTask
+      key={task.id}
+      task={task}
+      isSubtask={isSubtask}
+      onToggleExpansion={toggleTaskExpansion}
+      onToggleCompletion={toggleTaskCompletion}
+      onEdit={setEditingTask}
+      onDelete={handleDeleteTask}
+      onAddSubtask={setAddingSubtask}
+      expandedTasks={expandedTasks}
+      getCompanyName={getCompanyName}
+      getCompanyColor={getCompanyColor}
+    />
   );
 
   return (
@@ -628,7 +701,93 @@ export function TaskList({
                 </div>
               </div>
             )}
-            {filteredAndSortedTasks.map((task) => renderTask(task))}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={filteredAndSortedTasks.map(task => task.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {filteredAndSortedTasks.map((task) => (
+                  <div key={task.id}>
+                    {renderTask(task)}
+                    {!task.parentTaskId && expandedTasks.has(task.id) && task.subtasks && task.subtasks.length > 0 && (
+                      <div className="ml-8 space-y-2">
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={(event) => handleSubtaskDragEnd(task.id, event)}
+                        >
+                          <SortableContext
+                            items={task.subtasks.map(subtask => subtask.id)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            {task.subtasks.map(subtask => renderTask(subtask, true))}
+                          </SortableContext>
+                        </DndContext>
+                      </div>
+                    )}
+                    {!task.parentTaskId && addingSubtask === task.id && (
+                      <div className="ml-8 flex items-center gap-2">
+                        <Input
+                          type="text"
+                          value={newSubtaskName}
+                          onChange={(e) => setNewSubtaskName(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              handleAddSubtask(task.id);
+                            }
+                          }}
+                          placeholder="Enter subtask name"
+                          className="flex-1"
+                          autoFocus
+                        />
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleAddSubtask(task.id)}
+                                className="hover:bg-green-50 transition-all duration-300 hover:scale-110"
+                              >
+                                <Plus className="h-4 w-4 text-green-600" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Add subtask</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setAddingSubtask(null);
+                                  setNewSubtaskName('');
+                                }}
+                                className="hover:bg-gray-100 transition-all duration-300 hover:scale-110"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Cancel</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
         </CardContent>
       </Card>
