@@ -93,11 +93,16 @@ function SortableTask({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="space-y-2">
+    <div ref={setNodeRef} style={style} className={cn(
+      "space-y-2",
+      isSubtask && "ml-8 border-l-2 border-gray-200 pl-4"
+    )}>
       <div 
-        className={`flex items-center justify-between p-4 rounded-lg border bg-card shadow-sm hover:shadow-xl transition-all duration-300 hover:border-gray-400 hover:scale-[1.02] hover:bg-gray-50/80 cursor-pointer group ${
-          task.completed ? 'animate-complete' : ''
-        }`}
+        className={cn(
+          "flex items-center justify-between p-4 rounded-lg border bg-card shadow-sm hover:shadow-xl transition-all duration-300 hover:border-gray-400 hover:scale-[1.02] hover:bg-gray-50/80 cursor-pointer group",
+          task.completed && 'animate-complete',
+          isSubtask && 'bg-gray-50/50'
+        )}
         onClick={(e) => {
           if (!(e.target as HTMLElement).closest('button')) {
             if (!isSubtask && task.subtasks && task.subtasks.length > 0) {
@@ -734,7 +739,7 @@ export function TaskList({
                       </div>
                     )}
                     {!task.parentTaskId && addingSubtask === task.id && (
-                      <div className="ml-8 flex items-center gap-2">
+                      <div className="ml-8 mt-4 flex items-center gap-2">
                         <Input
                           type="text"
                           value={newSubtaskName}
