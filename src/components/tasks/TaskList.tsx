@@ -376,17 +376,19 @@ export function TaskList({
             <span className={`text-sm font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>
               {task.name}
             </span>
-            <div 
-              className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
-              style={{ 
-                backgroundColor: `${getCompanyColor(task.companyId)}20`,
-                color: getCompanyColor(task.companyId),
-                border: `1px solid ${getCompanyColor(task.companyId)}40`
-              }}
-            >
-              <Building2 className="h-3 w-3" />
-              <span>{getCompanyName(task.companyId)}</span>
-            </div>
+            {!isSubtask && (
+              <div 
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
+                style={{ 
+                  backgroundColor: `${getCompanyColor(task.companyId)}20`,
+                  color: getCompanyColor(task.companyId),
+                  border: `1px solid ${getCompanyColor(task.companyId)}40`
+                }}
+              >
+                <Building2 className="h-3 w-3" />
+                <span>{getCompanyName(task.companyId)}</span>
+              </div>
+            )}
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Calendar className="h-3 w-3" />
               {format(new Date(task.createdAt), 'MMM d, yyyy')}
