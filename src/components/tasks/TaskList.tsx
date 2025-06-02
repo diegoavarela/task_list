@@ -99,7 +99,7 @@ function SortableTask({
     )}>
       <div 
         className={cn(
-          "flex items-center justify-between p-4 rounded-lg border bg-card shadow-sm hover:shadow-xl transition-all duration-300 hover:border-gray-400 hover:scale-[1.02] hover:bg-gray-50/80 cursor-pointer group",
+          "flex items-center justify-between p-2.5 rounded-lg border bg-card shadow-sm hover:shadow-xl transition-all duration-300 hover:border-gray-400 hover:scale-[1.02] hover:bg-gray-50/80 cursor-pointer group",
           task.completed && 'animate-complete',
           isSubtask && 'bg-gray-50/50'
         )}
@@ -113,13 +113,13 @@ function SortableTask({
           }
         }}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             {...attributes}
             {...listeners}
             className="hover:scale-110 transition-all duration-300 cursor-grab active:cursor-grabbing"
           >
-            <GripVertical className="h-4 w-4 text-gray-400" />
+            <GripVertical className="h-3.5 w-3.5 text-gray-400" />
           </button>
 
           {!isSubtask && task.subtasks && task.subtasks.length > 0 && (
@@ -134,9 +134,9 @@ function SortableTask({
                     className="hover:scale-110 transition-all duration-300"
                   >
                     {expandedTasks.has(task.id) ? (
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                      <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-gray-500" />
+                      <ChevronRight className="h-3.5 w-3.5 text-gray-500" />
                     )}
                   </button>
                 </TooltipTrigger>
@@ -149,7 +149,7 @@ function SortableTask({
 
           <div
             className={cn(
-              "flex items-center gap-2 p-2 rounded-lg transition-colors",
+              "flex items-center gap-2 p-1 rounded-lg transition-colors",
               task.completed && "animate-complete"
             )}
           >
@@ -159,14 +159,14 @@ function SortableTask({
                 onToggleCompletion(task);
               }}
               className={cn(
-                "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
+                "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors",
                 task.completed
                   ? "border-green-500 bg-green-500"
                   : "border-gray-300 hover:border-gray-400"
               )}
             >
               {task.completed && (
-                <Check className="w-3 h-3 text-white animate-check" />
+                <Check className="w-2.5 h-2.5 text-white animate-check" />
               )}
             </button>
           </div>
@@ -177,25 +177,25 @@ function SortableTask({
             </span>
             {!isSubtask && (
               <div 
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
+                className="flex items-center gap-0.5 px-1 py-[1px] rounded-full text-[9px] font-medium"
                 style={{ 
                   backgroundColor: `${getCompanyColor(task.companyId)}20`,
                   color: getCompanyColor(task.companyId),
                   border: `1px solid ${getCompanyColor(task.companyId)}40`
                 }}
               >
-                <Building2 className="h-3 w-3" />
-                <span>{getCompanyName(task.companyId)}</span>
+                <Building2 className="h-2 w-2" />
+                <span className="leading-none">{getCompanyName(task.companyId)}</span>
               </div>
             )}
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Calendar className="h-3 w-3" />
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Calendar className="h-2.5 w-2.5" />
               {format(new Date(task.createdAt), 'MMM d, yyyy')}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {!isSubtask && (
             <TooltipProvider>
               <Tooltip>
@@ -207,7 +207,7 @@ function SortableTask({
                     }}
                     className="hover:scale-110 transition-all duration-300"
                   >
-                    <Plus className="h-4 w-4 text-gray-500" />
+                    <Plus className="h-3.5 w-3.5 text-gray-500" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -227,7 +227,7 @@ function SortableTask({
                   }}
                   className="hover:scale-110 transition-all duration-300"
                 >
-                  <Edit2 className="h-4 w-4 text-gray-500" />
+                  <Edit2 className="h-3.5 w-3.5 text-gray-500" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>
@@ -246,7 +246,7 @@ function SortableTask({
                   }}
                   className="hover:scale-110 transition-all duration-300"
                 >
-                  <Trash2 className="h-4 w-4 text-red-500" />
+                  <Trash2 className="h-3.5 w-3.5 text-red-500" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>
