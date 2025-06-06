@@ -9,4 +9,5 @@ export interface Task {
   order?: number;
   tagIds?: string[];
   dueDate?: Date;
+  dueTime?: string; // Format: "HH:mm" (24-hour format)
 } 

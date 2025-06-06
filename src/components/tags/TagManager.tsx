@@ -48,8 +48,8 @@ function ColorPicker({ value, onChange, className = '' }: ColorPickerProps) {
             className="fixed inset-0 z-40" 
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute top-full left-0 mt-2 p-3 bg-card rounded-lg shadow-lg border z-50">
-            <div className="grid grid-cols-5 gap-2">
+          <div className="absolute top-full left-0 mt-2 p-6 bg-card rounded-lg shadow-lg border z-50 min-w-[280px]">
+            <div className="grid grid-cols-4 gap-4">
               {TAG_COLORS.map((color) => (
                 <button
                   key={color}

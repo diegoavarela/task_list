@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
-import { format } from 'date-fns';
+import { format, isToday, isTomorrow, isPast, startOfDay } from 'date-fns';
 import {
   DndContext,
   closestCenter,
@@ -67,6 +67,41 @@ interface SortableTaskProps {
   getCompanyName: (companyId: string) => string;
   getCompanyColor: (companyId: string) => string;
   tags: Tag[];
+  viewMode: 'normal' | 'compact';
+}
+
+// Helper function to get date status
+function getDateStatus(date: Date | string | undefined) {
+  if (!date) return null;
+  
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  const today = startOfDay(new Date());
+  const dateDay = startOfDay(dateObj);
+  
+  if (isPast(dateDay) && !isToday(dateObj)) {
+    return 'overdue';
+  } else if (isToday(dateObj)) {
+    return 'today';
+  } else if (isTomorrow(dateObj)) {
+    return 'tomorrow';
+  }
+  return 'upcoming';
+}
+
+// Helper function to format due date text
+function formatDueDate(date: Date | string, time?: string) {
+  const status = getDateStatus(date);
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  const timeText = time ? ` at ${time}` : '';
+  
+  if (status === 'today') {
+    return `Due Today${timeText}`;
+  } else if (status === 'tomorrow') {
+    return `Due Tomorrow${timeText}`;
+  } else if (status === 'overdue') {
+    return `Overdue (${format(dateObj, 'MMM d')}${timeText})`;
+  }
+  return `Due ${format(dateObj, 'MMM d')}${timeText}`;
 }
 
 function SortableTask({
@@ -213,19 +248,22 @@ function SortableTask({
                     </div>
                   )}
                   
-                  {/* Due date for subtasks or created date for main tasks */}
+                  {/* Due date for subtasks and main tasks, or created date for main tasks without due date */}
                   <div className="task-date">
                     <Calendar className="h-3 w-3" />
-                    {task.dueDate && isSubtask ? (
+                    {task.dueDate ? (
                       <span className={cn(
                         "text-xs",
-                        new Date(task.dueDate) < new Date() && "due-date-overdue",
-                        format(new Date(task.dueDate), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && "due-date-today"
+                        getDateStatus(task.dueDate) === 'overdue' && "due-date-overdue",
+                        getDateStatus(task.dueDate) === 'today' && "due-date-today",
+                        getDateStatus(task.dueDate) === 'tomorrow' && "due-date-tomorrow"
                       )}>
-                        Due {format(new Date(task.dueDate), 'MMM d')}
+                        {formatDueDate(task.dueDate, task.dueTime)}
                       </span>
                     ) : (
-                      format(new Date(task.createdAt), 'MMM d, yyyy')
+                      <span className="text-xs">
+                        {format(new Date(task.createdAt), 'MMM d, yyyy')}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -238,12 +276,13 @@ function SortableTask({
                   {task.tagIds && task.tagIds.length > 0 && (
                     <span>• {task.tagIds.length} tag{task.tagIds.length > 1 ? 's' : ''}</span>
                   )}
-                  {task.dueDate && isSubtask && (
+                  {task.dueDate && (
                     <span className={cn(
-                      new Date(task.dueDate) < new Date() && "text-red-500",
-                      format(new Date(task.dueDate), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && "text-orange-500"
+                      getDateStatus(task.dueDate) === 'overdue' && "text-red-500",
+                      getDateStatus(task.dueDate) === 'today' && "text-amber-500",
+                      getDateStatus(task.dueDate) === 'tomorrow' && "text-amber-500"
                     )}>
-                      Due {format(new Date(task.dueDate), 'MMM d')}
+                      {formatDueDate(task.dueDate, task.dueTime)}
                     </span>
                   )}
                 </div>
@@ -346,6 +385,7 @@ export function TaskList({
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskCompany, setNewTaskCompany] = useState('');
   const [newTaskDate, setNewTaskDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [newTaskTime, setNewTaskTime] = useState('');
   const [newTaskTags, setNewTaskTags] = useState<string[]>([]);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -356,6 +396,7 @@ export function TaskList({
   const [addingSubtask, setAddingSubtask] = useState<string | null>(null);
   const [newSubtaskName, setNewSubtaskName] = useState('');
   const [newSubtaskDueDate, setNewSubtaskDueDate] = useState('');
+  const [newSubtaskDueTime, setNewSubtaskDueTime] = useState('');
   const [newSubtaskTags, setNewSubtaskTags] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'normal' | 'compact'>('normal');
   const { toast } = useToast();
@@ -399,12 +440,14 @@ export function TaskList({
         completed: false,
         subtasks: [],
         tagIds: newTaskTags,
-        dueDate: new Date(newTaskDate)
+        dueDate: new Date(newTaskDate),
+        dueTime: newTaskTime || undefined
       };
       onTaskAdd(newTask);
       setNewTaskName('');
       setNewTaskCompany('');
       setNewTaskDate(format(new Date(), 'yyyy-MM-dd'));
+      setNewTaskTime('');
       setNewTaskTags([]);
       toast({
         title: "Task added",
@@ -555,7 +598,10 @@ export function TaskList({
         companyId: parentTask.companyId,
         completed: false,
         subtasks: [],
-        parentTaskId
+        parentTaskId,
+        dueDate: newSubtaskDueDate ? new Date(newSubtaskDueDate) : undefined,
+        dueTime: newSubtaskDueTime || undefined,
+        tagIds: newSubtaskTags
       };
       
       const updatedTask = {
@@ -569,6 +615,9 @@ export function TaskList({
       
       onTaskUpdate(parentTaskId, updatedTask);
       setNewSubtaskName('');
+      setNewSubtaskDueDate('');
+      setNewSubtaskDueTime('');
+      setNewSubtaskTags([]);
       setAddingSubtask(null);
       setExpandedTasks(prev => new Set([...prev, parentTaskId]));
       toast({
@@ -781,7 +830,14 @@ export function TaskList({
                           type="date"
                           value={newTaskDate}
                           onChange={(e) => setNewTaskDate(e.target.value)}
-                          className="w-[160px]"
+                          className="w-[140px]"
+                        />
+                        <Input
+                          type="time"
+                          value={newTaskTime}
+                          onChange={(e) => setNewTaskTime(e.target.value)}
+                          placeholder="Optional time"
+                          className="w-[120px]"
                         />
                         <Button 
                           onClick={() => {
@@ -879,6 +935,13 @@ export function TaskList({
                                     placeholder="Due date (optional)"
                                     className="h-9 flex-1"
                                   />
+                                  <Input
+                                    type="time"
+                                    value={newSubtaskDueTime}
+                                    onChange={(e) => setNewSubtaskDueTime(e.target.value)}
+                                    placeholder="Time (optional)"
+                                    className="h-9 w-[120px]"
+                                  />
                                   <Button
                                     variant="default"
                                     size="sm"
@@ -896,6 +959,7 @@ export function TaskList({
                                       setAddingSubtask(null);
                                       setNewSubtaskName('');
                                       setNewSubtaskDueDate('');
+                                      setNewSubtaskDueTime('');
                                       setNewSubtaskTags([]);
                                     }}
                                   >
@@ -950,51 +1014,97 @@ export function TaskList({
             />
             {editingTask?.parentTaskId ? (
               <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</label>
-                  <Input
-                    type="date"
-                    value={editingTask?.dueDate ? format(new Date(editingTask.dueDate), 'yyyy-MM-dd') : ''}
-                    onChange={(e) => setEditingTask(prev => prev ? { 
-                      ...prev, 
-                      dueDate: e.target.value ? new Date(e.target.value) : undefined
-                    } : null)}
-                    placeholder="Due date (optional)"
-                    className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</label>
+                    <Input
+                      type="date"
+                      value={editingTask?.dueDate ? format(new Date(editingTask.dueDate), 'yyyy-MM-dd') : ''}
+                      onChange={(e) => setEditingTask(prev => prev ? { 
+                        ...prev, 
+                        dueDate: e.target.value ? new Date(e.target.value) : undefined
+                      } : null)}
+                      placeholder="Due date (optional)"
+                      className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Due Time</label>
+                    <Input
+                      type="time"
+                      value={editingTask?.dueTime || ''}
+                      onChange={(e) => setEditingTask(prev => prev ? { 
+                        ...prev, 
+                        dueTime: e.target.value || undefined
+                      } : null)}
+                      placeholder="Optional time"
+                      className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                    />
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Company</label>
-                  <select
-                    value={editingTask?.companyId || ''}
-                    onChange={(e) => setEditingTask(prev => prev ? { ...prev, companyId: e.target.value } : null)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
-                  >
-                    <option value="">Select company</option>
-                    {companies.map((company) => (
-                      <option key={company.id} value={company.id}>
-                        {company.name}
-                      </option>
-                    ))}
-                  </select>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Company</label>
+                    <select
+                      value={editingTask?.companyId || ''}
+                      onChange={(e) => setEditingTask(prev => prev ? { ...prev, companyId: e.target.value } : null)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                    >
+                      <option value="">Select company</option>
+                      {companies.map((company) => (
+                        <option key={company.id} value={company.id}>
+                          {company.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Created Date</label>
+                    <Input
+                      type="date"
+                      value={editingTask?.createdAt ? format(new Date(editingTask.createdAt), 'yyyy-MM-dd') : ''}
+                      onChange={(e) => setEditingTask(prev => prev ? { 
+                        ...prev, 
+                        createdAt: new Date(e.target.value)
+                      } : null)}
+                      className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Created Date</label>
-                  <Input
-                    type="date"
-                    value={editingTask?.createdAt ? format(new Date(editingTask.createdAt), 'yyyy-MM-dd') : ''}
-                    onChange={(e) => setEditingTask(prev => prev ? { 
-                      ...prev, 
-                      createdAt: new Date(e.target.value)
-                    } : null)}
-                    className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</label>
+                    <Input
+                      type="date"
+                      value={editingTask?.dueDate ? format(new Date(editingTask.dueDate), 'yyyy-MM-dd') : ''}
+                      onChange={(e) => setEditingTask(prev => prev ? { 
+                        ...prev, 
+                        dueDate: e.target.value ? new Date(e.target.value) : undefined
+                      } : null)}
+                      placeholder="Due date (optional)"
+                      className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Due Time</label>
+                    <Input
+                      type="time"
+                      value={editingTask?.dueTime || ''}
+                      onChange={(e) => setEditingTask(prev => prev ? { 
+                        ...prev, 
+                        dueTime: e.target.value || undefined
+                      } : null)}
+                      placeholder="Optional time"
+                      className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                    />
+                  </div>
                 </div>
               </div>
             )}
+            <>
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Tags</label>
               <TagSelector
@@ -1013,6 +1123,7 @@ export function TaskList({
               />
               <label>Mark as completed</label>
             </div>
+            </>
           </div>
           <DialogFooter>
             <Button 

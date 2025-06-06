@@ -432,16 +432,53 @@
   /* Due date indicators */
   .due-date-overdue {
     animation: pulse 2s infinite;
-    color: hsl(var(--destructive));
+    color: #ef4444; /* Red */
+    font-weight: 600;
   }
 
   .due-date-today {
-    color: hsl(var(--primary));
+    color: #f59e0b; /* Amber */
+    font-weight: 600;
+  }
+  
+  .due-date-tomorrow {
+    color: #f59e0b; /* Amber */
     font-weight: 600;
   }
 
   .due-date-upcoming {
     color: hsl(var(--muted-foreground));
+  }
+  
+  /* Date badge styles */
+  .date-badge-overdue {
+    background-color: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .date-badge-today {
+    background-color: #fef3c7;
+    color: #d97706;
+    border: 1px solid #fde68a;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .date-badge-tomorrow {
+    background-color: #fef3c7;
+    color: #d97706;
+    border: 1px solid #fde68a;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
   }
 
   /* Glassmorphism effects */
