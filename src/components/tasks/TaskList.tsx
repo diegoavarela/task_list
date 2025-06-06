@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical, Check, Hash, FileText, CheckSquare, Search, Filter, Tag as TagIcon, Zap } from 'lucide-react';
+import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical, Check, Hash, FileText, CheckSquare, Search, Filter, Tag as TagIcon, Zap, Repeat, Layers, Folder } from 'lucide-react';
 import { PriorityBadge } from './PriorityBadge';
 import { StatusBadge } from './StatusBadge';
 import type { Task } from '../../types/task';
@@ -10,6 +10,13 @@ import { FileAttachments } from './FileAttachments';
 import { TaskDependencies } from './TaskDependencies';
 import { SmartLists } from './SmartLists';
 import { BulkOperations } from './BulkOperations';
+import { RecurringTasks } from './RecurringTasks';
+import { TaskTemplates } from './TaskTemplates';
+import { CategoryManager } from '../categories/CategoryManager';
+import { CategoryFilter } from '../categories/CategoryFilter';
+import { RecurringTaskService } from '@/services/recurringTasks';
+import type { TaskTemplate } from '@/lib/storage';
+import type { Category } from '@/types/category';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -61,6 +68,15 @@ interface TaskListProps {
   setShowAddTask: (show: boolean) => void;
   showCompleted: boolean;
   setShowCompleted: (show: boolean) => void;
+  templates: TaskTemplate[];
+  onTemplateCreate: (template: Omit<TaskTemplate, 'id' | 'createdAt' | 'useCount' | 'lastUsed'>) => void;
+  onTemplateUpdate: (templateId: string, updates: Partial<TaskTemplate>) => void;
+  onTemplateDelete: (templateId: string) => void;
+  onTemplateUse: (template: TaskTemplate) => void;
+  categories: Category[];
+  onCategoryCreate: (category: Omit<Category, 'id' | 'createdAt' | 'order'>) => void;
+  onCategoryUpdate: (categoryId: string, updates: Partial<Category>) => void;
+  onCategoryDelete: (categoryId: string) => void;
 }
 
 interface SortableTaskProps {
@@ -255,6 +271,23 @@ function SortableTask({
                     <StatusBadge status={task.status} />
                   )}
                   
+                  {/* Recurring Indicator */}
+                  {task.isRecurring && task.recurringPattern && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200">
+                            <Repeat className="h-3 w-3" />
+                            <span>Recurring</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-sm">{RecurringTaskService.getPatternDescription(task.recurringPattern)}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  
                   {!isSubtask && (
                     <div 
                       className="task-company-badge whitespace-nowrap"
@@ -417,7 +450,16 @@ export function TaskList({
   showAddTask,
   setShowAddTask,
   showCompleted,
-  setShowCompleted
+  setShowCompleted,
+  templates = [],
+  onTemplateCreate,
+  onTemplateUpdate,
+  onTemplateDelete,
+  onTemplateUse,
+  categories = [],
+  onCategoryCreate,
+  onCategoryUpdate,
+  onCategoryDelete
 }: TaskListProps) {
   // Defensive check to prevent crashes
   if (!tasks || !companies || !tags) {
@@ -433,6 +475,7 @@ export function TaskList({
   const [newTaskTime, setNewTaskTime] = useState('');
   const [newTaskTags, setNewTaskTags] = useState<string[]>([]);
   const [newTaskNotes, setNewTaskNotes] = useState('');
+  const [newTaskCategory, setNewTaskCategory] = useState('');
   const [newTaskAttachments, setNewTaskAttachments] = useState<Array<{
     id: string;
     name: string;
@@ -442,6 +485,13 @@ export function TaskList({
     uploadedAt: Date;
   }>>([]);
   const [newTaskDependencies, setNewTaskDependencies] = useState<string[]>([]);
+  const [newTaskRecurringPattern, setNewTaskRecurringPattern] = useState<{
+    type: 'daily' | 'weekly' | 'monthly' | 'yearly';
+    interval: number;
+    endDate?: Date;
+    daysOfWeek?: number[];
+    dayOfMonth?: number;
+  } | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
@@ -451,7 +501,7 @@ export function TaskList({
   const [showFilters, setShowFilters] = useState(false);
   const [smartListFilter, setSmartListFilter] = useState<((task: Task) => boolean) | null>(null);
   const [activeSmartList, setActiveSmartList] = useState<string | null>(null);
-  const [showSmartLists, setShowSmartLists] = useState(true);
+  const [showSmartLists, setShowSmartLists] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -463,6 +513,9 @@ export function TaskList({
   const [newSubtaskTags, setNewSubtaskTags] = useState<string[]>([]);
   const [newSubtaskNotes, setNewSubtaskNotes] = useState('');
   const [viewMode, setViewMode] = useState<'normal' | 'compact'>('normal');
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const sensors = useSensors(
@@ -532,6 +585,15 @@ export function TaskList({
       });
     }
 
+    // Filter by category
+    if (selectedCategoryId) {
+      if (selectedCategoryId === 'uncategorized') {
+        filtered = filtered.filter(task => !task.categoryId);
+      } else {
+        filtered = filtered.filter(task => task.categoryId === selectedCategoryId);
+      }
+    }
+
     // Filter by completion status
     if (!showCompleted) {
       filtered = filtered.filter(task => !task.completed);
@@ -551,7 +613,7 @@ export function TaskList({
       const dateB = new Date(b.createdAt).getTime();
       return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
     });
-  }, [tasks, selectedCompany, selectedTags, searchQuery, sortOrder, showCompleted, companies, tags, getCompanyName, smartListFilter]);
+  }, [tasks, selectedCompany, selectedTags, searchQuery, sortOrder, showCompleted, companies, tags, getCompanyName, smartListFilter, selectedCategoryId]);
 
   const handleSmartListFilter = (filterFn: (task: Task) => boolean, filterName: string) => {
     if (filterName === '') {
@@ -594,6 +656,7 @@ export function TaskList({
       const newTask: Omit<Task, 'id' | 'createdAt'> = {
         name: newTaskName.trim(),
         companyId: newTaskCompany,
+        categoryId: newTaskCategory || undefined,
         completed: false,
         subtasks: [],
         tagIds: newTaskTags,
@@ -609,17 +672,21 @@ export function TaskList({
           uploadedAt: att.uploadedAt,
           uploadedBy: 'current-user' // In a real app, get from auth context
         })),
-        dependencies: newTaskDependencies
+        dependencies: newTaskDependencies,
+        isRecurring: !!newTaskRecurringPattern,
+        recurringPattern: newTaskRecurringPattern
       };
       onTaskAdd(newTask);
       setNewTaskName('');
       setNewTaskCompany('');
+      setNewTaskCategory('');
       setNewTaskDate(format(new Date(), 'yyyy-MM-dd'));
       setNewTaskTime('');
       setNewTaskTags([]);
       setNewTaskNotes('');
       setNewTaskAttachments([]);
       setNewTaskDependencies([]);
+      setNewTaskRecurringPattern(null);
       toast({
         title: "Task added",
         description: "Your task has been added successfully.",
@@ -663,11 +730,28 @@ export function TaskList({
   };
 
   const toggleTaskCompletion = (task: Task) => {
+    const isCompleting = !task.completed;
+    
     const updatedTask: Task = {
       ...task,
-      completed: !task.completed
+      completed: isCompleting,
+      completedAt: isCompleting ? new Date() : undefined,
+      status: isCompleting ? 'completed' : 'todo'
     };
+    
     onTaskUpdate(task.id, updatedTask);
+
+    // Generate next occurrence for recurring tasks when completed
+    if (isCompleting && RecurringTaskService.shouldGenerateNext(task)) {
+      const nextOccurrence = RecurringTaskService.generateNextOccurrence(task);
+      if (nextOccurrence) {
+        onTaskAdd(nextOccurrence);
+        toast({
+          title: "Recurring task completed",
+          description: "Next occurrence has been scheduled automatically.",
+        });
+      }
+    }
   };
 
   const handleExportJSON = () => {
@@ -919,6 +1003,28 @@ export function TaskList({
                 <span className="hidden sm:inline">{showAddTask ? 'Cancel' : 'Add Task'}</span>
               </Button>
               <Button
+                variant="outline"
+                onClick={() => setShowTemplates(true)}
+                className="flex items-center gap-2 touch-action-manipulation"
+              >
+                <Layers className="h-4 w-4" />
+                <span className="hidden sm:inline">Templates</span>
+                {templates.length > 0 && (
+                  <span className="bg-primary text-primary-foreground rounded-full text-xs px-1.5 py-0.5 min-w-[1.25rem] h-5 flex items-center justify-center">{templates.length}</span>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowCategoryManager(true)}
+                className="flex items-center gap-2 touch-action-manipulation"
+              >
+                <Folder className="h-4 w-4" />
+                <span className="hidden sm:inline">Categories</span>
+                {categories.length > 0 && (
+                  <span className="bg-primary text-primary-foreground rounded-full text-xs px-1.5 py-0.5 min-w-[1.25rem] h-5 flex items-center justify-center">{categories.length}</span>
+                )}
+              </Button>
+              <Button
                 variant={showSmartLists ? "default" : "outline"}
                 onClick={() => setShowSmartLists(!showSmartLists)}
                 className="flex items-center gap-2 touch-action-manipulation"
@@ -957,7 +1063,7 @@ export function TaskList({
               >
                 <Filter className="h-4 w-4" />
                 <span className="hidden sm:inline">Filters</span>
-                {(searchQuery || selectedCompany !== 'all' || selectedTags.length > 0) && (
+                {(searchQuery || selectedCompany !== 'all' || selectedTags.length > 0 || selectedCategoryId) && (
                   <span className="bg-primary text-primary-foreground rounded-full w-2 h-2" />
                 )}
               </Button>
@@ -1081,10 +1187,25 @@ export function TaskList({
                       )}
                     </div>
                   </div>
+                  
+                  {/* Category Filter */}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                      <Folder className="h-4 w-4 inline mr-2" />
+                      Category
+                    </label>
+                    <CategoryFilter
+                      categories={categories}
+                      tasks={tasks}
+                      selectedCategoryId={selectedCategoryId}
+                      onCategorySelect={setSelectedCategoryId}
+                      className="max-h-48 overflow-y-auto border rounded-lg p-2"
+                    />
+                  </div>
                 </div>
                 
                 {/* Clear Filters */}
-                {(searchQuery || selectedCompany !== 'all' || selectedTags.length > 0) && (
+                {(searchQuery || selectedCompany !== 'all' || selectedTags.length > 0 || selectedCategoryId) && (
                   <div className="flex justify-end">
                     <Button
                       variant="outline"
@@ -1093,6 +1214,7 @@ export function TaskList({
                         setSearchQuery('');
                         setSelectedCompany('all');
                         setSelectedTags([]);
+                        setSelectedCategoryId(null);
                       }}
                       className="flex items-center gap-2"
                     >
@@ -1107,6 +1229,46 @@ export function TaskList({
         </CardHeader>
         <CardContent className="pt-6">
           <div className="space-y-4">
+            {/* Always show quick stats summary */}
+            <Card className="bg-muted/30">
+              <CardContent className="p-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                  <div>
+                    <div className="text-2xl font-bold text-primary">
+                      {tasks.filter(t => !t.completed && !t.isArchived).length}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Active Tasks</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-green-600">
+                      {tasks.filter(t => t.completed).length}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Completed</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-red-600">
+                      {tasks.filter(t => {
+                        if (!t.dueDate || t.completed) return false;
+                        const dueDate = typeof t.dueDate === 'string' ? new Date(t.dueDate) : t.dueDate;
+                        return isPast(startOfDay(dueDate)) && !isToday(dueDate);
+                      }).length}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Overdue</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-orange-600">
+                      {tasks.filter(t => {
+                        if (!t.dueDate || t.completed) return false;
+                        const dueDate = typeof t.dueDate === 'string' ? new Date(t.dueDate) : t.dueDate;
+                        return isToday(dueDate);
+                      }).length}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Due Today</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
             {showSmartLists && (
               <SmartLists
                 tasks={tasks}
@@ -1146,6 +1308,25 @@ export function TaskList({
                             {companies.map((company) => (
                               <SelectItem key={company.id} value={company.id}>
                                 {company.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={newTaskCategory || "none"} onValueChange={(value) => setNewTaskCategory(value === "none" ? "" : value)}>
+                          <SelectTrigger className="w-full sm:w-[200px]">
+                            <SelectValue placeholder="Select category (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No category</SelectItem>
+                            {categories.map((category) => (
+                              <SelectItem key={category.id} value={category.id}>
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className="w-3 h-3 rounded-sm"
+                                    style={{ backgroundColor: category.color }}
+                                  />
+                                  {category.name}
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1212,6 +1393,13 @@ export function TaskList({
                           allTasks={tasks}
                           dependencies={newTaskDependencies}
                           onDependenciesChange={setNewTaskDependencies}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-1 block">Recurring Pattern</label>
+                        <RecurringTasks
+                          pattern={newTaskRecurringPattern}
+                          onPatternChange={setNewTaskRecurringPattern}
                         />
                       </div>
                     </div>
@@ -1424,6 +1612,36 @@ export function TaskList({
                     </select>
                   </div>
                   <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Category</label>
+                    <Select 
+                      value={editingTask?.categoryId || "none"} 
+                      onValueChange={(value) => setEditingTask(prev => prev ? { 
+                        ...prev, 
+                        categoryId: value === "none" ? undefined : value 
+                      } : null)}
+                    >
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No category</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-3 h-3 rounded-sm"
+                                style={{ backgroundColor: category.color }}
+                              />
+                              {category.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
                     <label className="text-sm font-medium text-gray-700 mb-1 block">Created Date</label>
                     <Input
                       type="date"
@@ -1537,6 +1755,21 @@ export function TaskList({
                 />
               </div>
             )}
+            {!editingTask?.parentTaskId && (
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Recurring Pattern</label>
+                <RecurringTasks
+                  pattern={editingTask?.recurringPattern || null}
+                  onPatternChange={(pattern) => {
+                    setEditingTask(prev => prev ? { 
+                      ...prev, 
+                      recurringPattern: pattern,
+                      isRecurring: !!pattern
+                    } : null);
+                  }}
+                />
+              </div>
+            )}
             </>
           </div>
           <DialogFooter>
@@ -1583,6 +1816,30 @@ export function TaskList({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {showTemplates && (
+        <TaskTemplates
+          templates={templates}
+          companies={companies}
+          tags={tags}
+          onTemplateCreate={onTemplateCreate}
+          onTemplateUpdate={onTemplateUpdate}
+          onTemplateDelete={onTemplateDelete}
+          onTemplateUse={onTemplateUse}
+          onClose={() => setShowTemplates(false)}
+        />
+      )}
+      
+      {showCategoryManager && (
+        <CategoryManager
+          categories={categories}
+          tasks={tasks}
+          onCategoryCreate={onCategoryCreate}
+          onCategoryUpdate={onCategoryUpdate}
+          onCategoryDelete={onCategoryDelete}
+          onClose={() => setShowCategoryManager(false)}
+        />
+      )}
     </div>
   );
 } 

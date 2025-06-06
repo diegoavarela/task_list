@@ -1,10 +1,24 @@
 import type { Task } from '../types/task';
 import type { Company } from '../types/company';
 import type { Tag } from '../types/tag';
+import type { Category } from '../types/category';
+
+interface TaskTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  templateData: Omit<Task, 'id' | 'createdAt' | 'completed' | 'completedAt'>;
+  isStarred: boolean;
+  useCount: number;
+  createdAt: Date;
+  lastUsed?: Date;
+}
 
 const TASKS_KEY = 'tasks';
 const COMPANIES_KEY = 'companies';
 const TAGS_KEY = 'tags';
+const TEMPLATES_KEY = 'templates';
+const CATEGORIES_KEY = 'categories';
 
 type SerializedTask = Omit<Task, 'createdAt' | 'dueDate' | 'subtasks'> & {
   createdAt: string;
@@ -135,4 +149,94 @@ export const loadTags = (): Tag[] => {
     console.error('Error loading tags:', error);
     return [];
   }
-}; 
+};
+
+type SerializedTemplate = Omit<TaskTemplate, 'createdAt' | 'lastUsed'> & {
+  createdAt: string;
+  lastUsed?: string;
+};
+
+const serializeTemplate = (template: TaskTemplate): SerializedTemplate => ({
+  ...template,
+  createdAt: template.createdAt.toISOString(),
+  lastUsed: template.lastUsed?.toISOString()
+});
+
+const deserializeTemplate = (template: SerializedTemplate): TaskTemplate => ({
+  ...template,
+  createdAt: new Date(template.createdAt),
+  lastUsed: template.lastUsed ? new Date(template.lastUsed) : undefined
+});
+
+export const saveTemplates = (templates: TaskTemplate[]): void => {
+  try {
+    const serializedTemplates = templates.map(serializeTemplate);
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(serializedTemplates));
+    console.log('Templates saved successfully:', templates.length);
+  } catch (error) {
+    console.error('Error saving templates:', error);
+  }
+};
+
+export const loadTemplates = (): TaskTemplate[] => {
+  try {
+    const templates = localStorage.getItem(TEMPLATES_KEY);
+    if (!templates) {
+      console.log('No templates found in storage');
+      return [];
+    }
+    const parsedTemplates = JSON.parse(templates) as SerializedTemplate[];
+    const loadedTemplates = parsedTemplates.map(deserializeTemplate);
+    console.log('Templates loaded successfully:', loadedTemplates.length);
+    return loadedTemplates;
+  } catch (error) {
+    console.error('Error loading templates:', error);
+    return [];
+  }
+};
+
+type SerializedCategory = Omit<Category, 'createdAt' | 'updatedAt'> & {
+  createdAt: string;
+  updatedAt?: string;
+};
+
+const serializeCategory = (category: Category): SerializedCategory => ({
+  ...category,
+  createdAt: category.createdAt.toISOString(),
+  updatedAt: category.updatedAt?.toISOString()
+});
+
+const deserializeCategory = (category: SerializedCategory): Category => ({
+  ...category,
+  createdAt: new Date(category.createdAt),
+  updatedAt: category.updatedAt ? new Date(category.updatedAt) : undefined
+});
+
+export const saveCategories = (categories: Category[]): void => {
+  try {
+    const serializedCategories = categories.map(serializeCategory);
+    localStorage.setItem(CATEGORIES_KEY, JSON.stringify(serializedCategories));
+    console.log('Categories saved successfully:', categories.length);
+  } catch (error) {
+    console.error('Error saving categories:', error);
+  }
+};
+
+export const loadCategories = (): Category[] => {
+  try {
+    const categories = localStorage.getItem(CATEGORIES_KEY);
+    if (!categories) {
+      console.log('No categories found in storage');
+      return [];
+    }
+    const parsedCategories = JSON.parse(categories) as SerializedCategory[];
+    const loadedCategories = parsedCategories.map(deserializeCategory);
+    console.log('Categories loaded successfully:', loadedCategories.length);
+    return loadedCategories;
+  } catch (error) {
+    console.error('Error loading categories:', error);
+    return [];
+  }
+};
+
+export type { TaskTemplate }; 

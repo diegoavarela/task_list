@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/use-toast';
 import type { Task } from '@/types/task';
 
 interface TaskDependenciesProps {
-  currentTask: Task;
+  currentTask: Task | null;
   allTasks: Task[];
   dependencies: string[]; // Array of task IDs that this task depends on
   onDependenciesChange: (dependencies: string[]) => void;
@@ -24,6 +24,11 @@ export function TaskDependencies({
 }: TaskDependenciesProps) {
   const [selectedDependency, setSelectedDependency] = useState<string>('');
   const { toast } = useToast();
+
+  // Return early if no current task
+  if (!currentTask) {
+    return null;
+  }
 
   // Filter out tasks that can't be dependencies
   const availableTasks = allTasks.filter(task => 

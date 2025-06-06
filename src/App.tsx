@@ -3,13 +3,14 @@ import { Save } from 'lucide-react';
 import type { Task } from './types/task';
 import type { Company } from './types/company';
 import type { Tag } from './types/tag';
+import type { Category } from './types/category';
 import { TaskList } from './components/tasks/TaskList';
 import { CompanyConfig } from './components/company/CompanyConfig';
 import { TagsPage } from './pages/Tags';
 import { TaskCalendar } from './components/calendar/TaskCalendar';
 import { TaskAnalytics } from './components/analytics/TaskAnalytics';
 import { Layout } from './components/layout/Layout';
-import { saveTasks, loadTasks, saveCompanies, loadCompanies, saveTags, loadTags } from './lib/storage';
+import { saveTasks, loadTasks, saveCompanies, loadCompanies, saveTags, loadTags, saveTemplates, loadTemplates, saveCategories, loadCategories, type TaskTemplate } from './lib/storage';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 import { useToast } from "@/components/ui/use-toast"
@@ -22,6 +23,8 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [templates, setTemplates] = useState<TaskTemplate[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -80,27 +83,39 @@ export default function App() {
       const loadedTasks = loadTasks();
       const loadedCompanies = loadCompanies();
       const loadedTags = loadTags();
+      const loadedTemplates = loadTemplates();
+      const loadedCategories = loadCategories();
       setTasks(loadedTasks || []);
       setCompanies(loadedCompanies || []);
       setTags(loadedTags || []);
+      setTemplates(loadedTemplates || []);
+      setCategories(loadedCategories || []);
     } catch (error) {
       console.error('Error loading data:', error);
       // Set empty arrays as fallback
       setTasks([]);
       setCompanies([]);
       setTags([]);
+      setTemplates([]);
+      setCategories([]);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   const debouncedSave = useCallback(
-    async (newTasks: Task[], newCompanies: Company[], newTags: Tag[]) => {
+    async (newTasks: Task[], newCompanies: Company[], newTags: Tag[], newTemplates?: TaskTemplate[], newCategories?: Category[]) => {
       try {
         setIsSaving(true);
         await saveTasks(newTasks);
         await saveCompanies(newCompanies);
         await saveTags(newTags);
+        if (newTemplates) {
+          await saveTemplates(newTemplates);
+        }
+        if (newCategories) {
+          await saveCategories(newCategories);
+        }
         setLastSaved(new Date());
         setSaveError(null);
       } catch (error) {
@@ -119,11 +134,11 @@ export default function App() {
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      debouncedSave(tasks, companies, tags);
+      debouncedSave(tasks, companies, tags, templates, categories);
     }, 1000); // Debounce for 1 second
 
     return () => clearTimeout(timeoutId);
-  }, [tasks, companies, tags, debouncedSave]);
+  }, [tasks, companies, tags, templates, categories, debouncedSave]);
 
   const handleAddTask = (taskData: Omit<Task, 'id' | 'createdAt'>) => {
     const newTask: Task = {
@@ -220,6 +235,71 @@ export default function App() {
     })));
   };
 
+  const handleAddTemplate = (templateData: Omit<TaskTemplate, 'id' | 'createdAt' | 'useCount' | 'lastUsed'>) => {
+    const newTemplate: TaskTemplate = {
+      ...templateData,
+      id: crypto.randomUUID(),
+      createdAt: new Date(),
+      useCount: 0
+    };
+    setTemplates(prev => [...prev, newTemplate]);
+  };
+
+  const handleUpdateTemplate = (templateId: string, updates: Partial<TaskTemplate>) => {
+    setTemplates(prev => prev.map(template => 
+      template.id === templateId ? { ...template, ...updates } : template
+    ));
+  };
+
+  const handleDeleteTemplate = (templateId: string) => {
+    setTemplates(prev => prev.filter(template => template.id !== templateId));
+  };
+
+  const handleUseTemplate = (template: TaskTemplate) => {
+    // Create new task from template
+    const newTask: Omit<Task, 'id' | 'createdAt'> = {
+      ...template.templateData,
+      completed: false,
+      isTemplate: false
+    };
+    
+    handleAddTask(newTask);
+    
+    // Update template usage stats
+    handleUpdateTemplate(template.id, {
+      useCount: template.useCount + 1,
+      lastUsed: new Date()
+    });
+  };
+
+  const handleAddCategory = (categoryData: Omit<Category, 'id' | 'createdAt' | 'order'>) => {
+    const maxOrder = Math.max(0, ...categories.map(c => c.order || 0));
+    const newCategory: Category = {
+      ...categoryData,
+      id: crypto.randomUUID(),
+      createdAt: new Date(),
+      order: maxOrder + 1
+    };
+    setCategories(prev => [...prev, newCategory]);
+  };
+
+  const handleUpdateCategory = (categoryId: string, updates: Partial<Category>) => {
+    setCategories(prev => prev.map(category => 
+      category.id === categoryId ? { ...category, ...updates } : category
+    ));
+  };
+
+  const handleDeleteCategory = (categoryId: string) => {
+    // Remove category from all tasks
+    setTasks(prev => prev.map(task => ({
+      ...task,
+      categoryId: task.categoryId === categoryId ? undefined : task.categoryId
+    })));
+    
+    // Delete the category
+    setCategories(prev => prev.filter(category => category.id !== categoryId));
+  };
+
   const handleSave = useCallback(async () => {
     if (isSaving) return;
     
@@ -273,7 +353,7 @@ export default function App() {
       <Layout 
         currentPage={currentPage} 
         onPageChange={setCurrentPage} 
-        onSave={() => debouncedSave(tasks, companies, tags)}
+        onSave={() => debouncedSave(tasks, companies, tags, templates, categories)}
         saveError={saveError}
         tasks={tasks}
         companies={companies}
@@ -292,6 +372,15 @@ export default function App() {
             setShowAddTask={setShowAddTask}
             showCompleted={showCompleted}
             setShowCompleted={setShowCompleted}
+            templates={templates}
+            onTemplateCreate={handleAddTemplate}
+            onTemplateUpdate={handleUpdateTemplate}
+            onTemplateDelete={handleDeleteTemplate}
+            onTemplateUse={handleUseTemplate}
+            categories={categories}
+            onCategoryCreate={handleAddCategory}
+            onCategoryUpdate={handleUpdateCategory}
+            onCategoryDelete={handleDeleteCategory}
           />
         ) : currentPage === 'companies' ? (
           <CompanyConfig
