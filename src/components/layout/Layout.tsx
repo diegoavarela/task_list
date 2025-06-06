@@ -149,8 +149,8 @@ export function Layout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex flex-col">
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-slate-200/50 shadow-sm">
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4 max-w-6xl">
           <div className="flex items-center justify-between">
             {/* Logo and Title */}
@@ -172,11 +172,11 @@ export function Layout({
                 </svg>
               </div>
               <div>
-                <h1 className="text-lg sm:text-xl font-semibold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                <h1 className="text-lg sm:text-xl font-semibold text-foreground">
                   The Freelo List
                 </h1>
                 {lastSaved && (
-                  <div className="hidden sm:block text-xs text-slate-500">
+                  <div className="hidden sm:block text-xs text-muted-foreground">
                     Auto-saved {format(lastSaved, 'HH:mm:ss')}
                   </div>
                 )}
@@ -184,13 +184,13 @@ export function Layout({
             </div>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-1 bg-slate-100/80 backdrop-blur-sm rounded-xl p-1 border border-slate-200/50">
+            <nav className="hidden md:flex items-center gap-1 bg-muted/80 backdrop-blur-sm rounded-lg p-1 border border-border/50">
               <button
                 onClick={() => onPageChange('tasks')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                   currentPage === 'tasks' 
-                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50' 
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    ? 'bg-background text-foreground shadow-sm' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                 }`}
               >
                 <CheckSquare className="h-4 w-4" />
@@ -198,10 +198,10 @@ export function Layout({
               </button>
               <button
                 onClick={() => onPageChange('companies')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                   currentPage === 'companies' 
-                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50' 
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    ? 'bg-background text-foreground shadow-sm' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                 }`}
               >
                 <Building2 className="h-4 w-4" />
@@ -209,10 +209,10 @@ export function Layout({
               </button>
               <button
                 onClick={() => onPageChange('tags')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                   currentPage === 'tags' 
-                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50' 
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    ? 'bg-background text-foreground shadow-sm' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                 }`}
               >
                 <Hash className="h-4 w-4" />
@@ -380,7 +380,7 @@ export function Layout({
       </header>
       <main className="flex-1 container mx-auto py-4 sm:py-6 lg:py-8 px-4 sm:px-6 max-w-6xl">
         {saveError && (
-          <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200/50 text-red-700 flex items-center gap-3 shadow-sm backdrop-blur-sm bg-red-50/90">
+          <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive flex items-center gap-3">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
@@ -389,7 +389,7 @@ export function Layout({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="h-5 w-5 text-red-500"
+              className="h-5 w-5"
             >
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />

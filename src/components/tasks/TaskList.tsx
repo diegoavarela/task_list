@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical, Check, Hash, FileText } from 'lucide-react';
+import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical, Check, Hash, FileText, CheckSquare } from 'lucide-react';
 import type { Task } from '../../types/task';
 import type { Company } from '../../types/company';
 import type { Tag } from '../../types/tag';
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
+import { EmptyState } from '@/components/ui/empty-state';
 import { format, isToday, isTomorrow, isPast, startOfDay } from 'date-fns';
 import {
   DndContext,
@@ -1018,17 +1019,15 @@ export function TaskList({
             </DndContext>
             
             {filteredAndSortedTasks.length === 0 && (
-              <div className="empty-state">
-                <CheckCircle2 className="empty-state-icon" />
-                <h3 className="empty-state-title">
-                  {showCompleted ? 'No tasks found' : 'No pending tasks'}
-                </h3>
-                <p className="empty-state-description">
-                  {showCompleted 
-                    ? 'Try adjusting your filters or add a new task.' 
-                    : 'Get started by clicking "Add Task" above. Once you have tasks, you can add subtasks using the "+ Subtask" button on each task.'}
-                </p>
-              </div>
+              <EmptyState
+                icon={<CheckSquare className="h-full w-full" />}
+                title="No tasks yet"
+                description="Create your first task to get started with organizing your work."
+                action={{
+                  label: "Add Task",
+                  onClick: () => setShowAddTask(true)
+                }}
+              />
             )}
           </div>
         </CardContent>

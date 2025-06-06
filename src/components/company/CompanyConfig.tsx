@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
+import { EmptyState } from '@/components/ui/empty-state';
 import { format } from 'date-fns';
 import {
   Tooltip,
@@ -248,13 +249,15 @@ export function CompanyConfig({ companies, onAddCompany, onUpdateCompany, onDele
         </CardHeader>
         <CardContent>
           {companies.length === 0 ? (
-            <div className="empty-state py-8">
-              <Building2 className="empty-state-icon" />
-              <h3 className="empty-state-title">No companies yet</h3>
-              <p className="empty-state-description">
-                Create your first company to organize your tasks better.
-              </p>
-            </div>
+            <EmptyState
+              icon={<Building2 className="h-full w-full" />}
+              title="No companies yet"
+              description="Create your first company to organize your tasks better."
+              action={{
+                label: "Add Company",
+                onClick: () => setShowAddForm(true)
+              }}
+            />
           ) : (
             <div className="space-y-3">
               {companies.map((company) => (

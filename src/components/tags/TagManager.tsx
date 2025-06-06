@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { Tag } from '@/types/tag';
@@ -258,13 +259,21 @@ export function TagManager({ tags, onAddTag, onUpdateTag, onDeleteTag }: TagMana
         </CardHeader>
         <CardContent>
           {tags.length === 0 ? (
-            <div className="empty-state py-8">
-              <TagIcon className="empty-state-icon" />
-              <h3 className="empty-state-title">No tags yet</h3>
-              <p className="empty-state-description">
-                Create your first tag to organize your tasks better.
-              </p>
-            </div>
+            <EmptyState
+              icon={<Hash className="h-full w-full" />}
+              title="No tags yet"
+              description="Create your first tag to organize your tasks better."
+              action={{
+                label: "Add Tag",
+                onClick: () => {
+                  const input = document.querySelector('input[placeholder="Tag name..."]') as HTMLInputElement;
+                  if (input) {
+                    input.focus();
+                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }
+              }}
+            />
           ) : (
             <div className="space-y-3">
               {tags.map((tag) => (
