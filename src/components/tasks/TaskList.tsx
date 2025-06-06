@@ -1,9 +1,15 @@
-import { useState, useMemo } from 'react';
-import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical, Check, Hash, FileText, CheckSquare } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical, Check, Hash, FileText, CheckSquare, Search, Filter, Tag as TagIcon, Zap } from 'lucide-react';
+import { PriorityBadge } from './PriorityBadge';
+import { StatusBadge } from './StatusBadge';
 import type { Task } from '../../types/task';
 import type { Company } from '../../types/company';
 import type { Tag } from '../../types/tag';
 import { TagSelector } from '@/components/tags/TagSelector';
+import { FileAttachments } from './FileAttachments';
+import { TaskDependencies } from './TaskDependencies';
+import { SmartLists } from './SmartLists';
+import { BulkOperations } from './BulkOperations';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -70,6 +76,9 @@ interface SortableTaskProps {
   getCompanyColor: (companyId: string) => string;
   tags: Tag[];
   viewMode: 'normal' | 'compact';
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onTaskSelection?: (taskId: string, selected: boolean) => void;
 }
 
 // Helper function to get date status
@@ -119,6 +128,9 @@ function SortableTask({
   getCompanyColor,
   tags,
   viewMode,
+  isSelectionMode = false,
+  isSelected = false,
+  onTaskSelection,
 }: SortableTaskProps) {
   const {
     attributes,
@@ -158,6 +170,17 @@ function SortableTask({
       >
         <div className="flex items-start justify-between w-full gap-2 sm:gap-4">
           <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
+            {isSelectionMode && (
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  onTaskSelection?.(task.id, e.target.checked);
+                }}
+                className="rounded border-gray-300 text-primary focus:ring-primary"
+              />
+            )}
             <button
               {...attributes}
               {...listeners}
@@ -224,6 +247,14 @@ function SortableTask({
               </div>
               {viewMode === 'normal' && (
                 <div className="task-meta flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
+                  {/* Priority Badge */}
+                  <PriorityBadge priority={task.priority} />
+                  
+                  {/* Status Badge */}
+                  {task.status !== 'todo' && (
+                    <StatusBadge status={task.status} />
+                  )}
+                  
                   {!isSubtask && (
                     <div 
                       className="task-company-badge whitespace-nowrap"
@@ -402,10 +433,27 @@ export function TaskList({
   const [newTaskTime, setNewTaskTime] = useState('');
   const [newTaskTags, setNewTaskTags] = useState<string[]>([]);
   const [newTaskNotes, setNewTaskNotes] = useState('');
+  const [newTaskAttachments, setNewTaskAttachments] = useState<Array<{
+    id: string;
+    name: string;
+    size: number;
+    type: string;
+    url: string;
+    uploadedAt: Date;
+  }>>([]);
+  const [newTaskDependencies, setNewTaskDependencies] = useState<string[]>([]);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<string>('all');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [smartListFilter, setSmartListFilter] = useState<((task: Task) => boolean) | null>(null);
+  const [activeSmartList, setActiveSmartList] = useState<string | null>(null);
+  const [showSmartLists, setShowSmartLists] = useState(true);
+  const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [addingSubtask, setAddingSubtask] = useState<string | null>(null);
@@ -424,17 +472,74 @@ export function TaskList({
     })
   );
 
+  const getCompanyName = useCallback((companyId: string) => {
+    return companies?.find(c => c.id === companyId)?.name || 'Unknown Company';
+  }, [companies]);
+
+  const getCompanyColor = useCallback((companyId: string) => {
+    return companies?.find(c => c.id === companyId)?.color || '#64748b';
+  }, [companies]);
+
   const filteredAndSortedTasks = useMemo(() => {
     let filtered = tasks || [];
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(task => {
+        // Search in task name
+        if (task.name.toLowerCase().includes(query)) return true;
+        
+        // Search in task notes
+        if (task.notes && task.notes.toLowerCase().includes(query)) return true;
+        
+        // Search in subtasks
+        if (task.subtasks) {
+          const hasMatchingSubtask = task.subtasks.some(subtask => 
+            subtask.name.toLowerCase().includes(query) ||
+            (subtask.notes && subtask.notes.toLowerCase().includes(query))
+          );
+          if (hasMatchingSubtask) return true;
+        }
+        
+        // Search in company name
+        const companyName = getCompanyName(task.companyId).toLowerCase();
+        if (companyName.includes(query)) return true;
+        
+        // Search in tag names
+        if (task.tagIds && task.tagIds.length > 0) {
+          const hasMatchingTag = task.tagIds.some(tagId => {
+            const tag = tags.find(t => t.id === tagId);
+            return tag && tag.name.toLowerCase().includes(query);
+          });
+          if (hasMatchingTag) return true;
+        }
+        
+        return false;
+      });
+    }
 
     // Filter by company
     if (selectedCompany !== 'all') {
       filtered = filtered.filter(task => task.companyId === selectedCompany);
     }
 
+    // Filter by tags
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(task => {
+        if (!task.tagIds || task.tagIds.length === 0) return false;
+        return selectedTags.every(tagId => task.tagIds!.includes(tagId));
+      });
+    }
+
     // Filter by completion status
     if (!showCompleted) {
       filtered = filtered.filter(task => !task.completed);
+    }
+
+    // Apply smart list filter
+    if (smartListFilter) {
+      filtered = filtered.filter(smartListFilter);
     }
 
     // Sort by order if it exists, otherwise by date
@@ -446,7 +551,43 @@ export function TaskList({
       const dateB = new Date(b.createdAt).getTime();
       return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
     });
-  }, [tasks, selectedCompany, sortOrder, showCompleted]);
+  }, [tasks, selectedCompany, selectedTags, searchQuery, sortOrder, showCompleted, companies, tags, getCompanyName, smartListFilter]);
+
+  const handleSmartListFilter = (filterFn: (task: Task) => boolean, filterName: string) => {
+    if (filterName === '') {
+      // Clear filter
+      setSmartListFilter(null);
+      setActiveSmartList(null);
+    } else {
+      setSmartListFilter(() => filterFn);
+      setActiveSmartList(filterName);
+    }
+  };
+
+  const handleTaskSelection = (taskId: string, selected: boolean) => {
+    if (selected) {
+      setSelectedTasks(prev => [...prev, taskId]);
+    } else {
+      setSelectedTasks(prev => prev.filter(id => id !== taskId));
+    }
+  };
+
+  const toggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    if (isSelectionMode) {
+      setSelectedTasks([]);
+    }
+  };
+
+  const selectAllVisible = () => {
+    const visibleTaskIds = filteredAndSortedTasks.map(task => task.id);
+    setSelectedTasks(visibleTaskIds);
+  };
+
+  const clearSelection = () => {
+    setSelectedTasks([]);
+    setIsSelectionMode(false);
+  };
 
   const handleAddTask = () => {
     if (newTaskName.trim() && newTaskCompany) {
@@ -458,7 +599,17 @@ export function TaskList({
         tagIds: newTaskTags,
         dueDate: new Date(newTaskDate),
         dueTime: newTaskTime || undefined,
-        notes: newTaskNotes || undefined
+        notes: newTaskNotes || undefined,
+        attachments: newTaskAttachments.map(att => ({
+          id: att.id,
+          name: att.name,
+          url: att.url,
+          size: att.size,
+          type: att.type,
+          uploadedAt: att.uploadedAt,
+          uploadedBy: 'current-user' // In a real app, get from auth context
+        })),
+        dependencies: newTaskDependencies
       };
       onTaskAdd(newTask);
       setNewTaskName('');
@@ -467,6 +618,8 @@ export function TaskList({
       setNewTaskTime('');
       setNewTaskTags([]);
       setNewTaskNotes('');
+      setNewTaskAttachments([]);
+      setNewTaskDependencies([]);
       toast({
         title: "Task added",
         description: "Your task has been added successfully.",
@@ -507,14 +660,6 @@ export function TaskList({
         description: "Your task has been deleted successfully.",
       });
     }
-  };
-
-  const getCompanyName = (companyId: string) => {
-    return companies?.find(c => c.id === companyId)?.name || 'Unknown Company';
-  };
-
-  const getCompanyColor = (companyId: string) => {
-    return companies?.find(c => c.id === companyId)?.color || '#64748b';
   };
 
   const toggleTaskCompletion = (task: Task) => {
@@ -752,6 +897,9 @@ export function TaskList({
       getCompanyColor={getCompanyColor}
       tags={tags}
       viewMode={viewMode}
+      isSelectionMode={isSelectionMode}
+      isSelected={selectedTasks.includes(task.id)}
+      onTaskSelection={handleTaskSelection}
     />
   );
 
@@ -769,6 +917,49 @@ export function TaskList({
               >
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline">{showAddTask ? 'Cancel' : 'Add Task'}</span>
+              </Button>
+              <Button
+                variant={showSmartLists ? "default" : "outline"}
+                onClick={() => setShowSmartLists(!showSmartLists)}
+                className="flex items-center gap-2 touch-action-manipulation"
+              >
+                <Zap className="h-4 w-4" />
+                <span className="hidden sm:inline">Smart Lists</span>
+                {activeSmartList && (
+                  <span className="bg-primary text-primary-foreground rounded-full w-2 h-2" />
+                )}
+              </Button>
+              <Button
+                variant={isSelectionMode ? "default" : "outline"}
+                onClick={toggleSelectionMode}
+                className="flex items-center gap-2 touch-action-manipulation"
+              >
+                <CheckSquare className="h-4 w-4" />
+                <span className="hidden sm:inline">{isSelectionMode ? 'Cancel' : 'Select'}</span>
+                {selectedTasks.length > 0 && (
+                  <span className="bg-primary text-primary-foreground rounded-full w-2 h-2" />
+                )}
+              </Button>
+              {isSelectionMode && (
+                <Button
+                  variant="outline"
+                  onClick={selectAllVisible}
+                  className="flex items-center gap-2 text-xs"
+                  size="sm"
+                >
+                  Select All ({filteredAndSortedTasks.length})
+                </Button>
+              )}
+              <Button
+                variant={showFilters ? "default" : "outline"}
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2 touch-action-manipulation"
+              >
+                <Filter className="h-4 w-4" />
+                <span className="hidden sm:inline">Filters</span>
+                {(searchQuery || selectedCompany !== 'all' || selectedTags.length > 0) && (
+                  <span className="bg-primary text-primary-foreground rounded-full w-2 h-2" />
+                )}
               </Button>
               <Button
                 variant="ghost"
@@ -795,19 +986,6 @@ export function TaskList({
                 )}
                 <span className="hidden sm:inline">{showCompleted ? 'Hide Completed' : 'Show Completed'}</span>
               </Button>
-              <Select value={selectedCompany} onValueChange={setSelectedCompany}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Filter by company" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Companies</SelectItem>
-                  {companies.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               <Button
                 variant="ghost"
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
@@ -819,9 +997,134 @@ export function TaskList({
               </Button>
             </div>
           </div>
+          {showFilters && (
+            <div className="mt-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
+              <div className="space-y-4">
+                {/* Search Input */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search tasks, notes, companies, or tags..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Company Filter */}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                      <Building2 className="h-4 w-4 inline mr-2" />
+                      Company
+                    </label>
+                    <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Companies" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Companies</SelectItem>
+                        {companies.map((company) => (
+                          <SelectItem key={company.id} value={company.id}>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: company.color }}
+                              />
+                              {company.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Tag Filter */}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                      <TagIcon className="h-4 w-4 inline mr-2" />
+                      Tags (select multiple)
+                    </label>
+                    <div className="space-y-2">
+                      {tags.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto">
+                          {tags.map((tag) => (
+                            <label key={tag.id} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={selectedTags.includes(tag.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedTags([...selectedTags, tag.id]);
+                                  } else {
+                                    setSelectedTags(selectedTags.filter(id => id !== tag.id));
+                                  }
+                                }}
+                                className="rounded border-gray-300"
+                              />
+                              <div
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
+                                style={{ 
+                                  backgroundColor: `${tag.color}15`,
+                                  color: tag.color,
+                                  border: `1px solid ${tag.color}30`
+                                }}
+                              >
+                                <Hash className="h-2.5 w-2.5" />
+                                {tag.name}
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">No tags available</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Clear Filters */}
+                {(searchQuery || selectedCompany !== 'all' || selectedTags.length > 0) && (
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSearchQuery('');
+                        setSelectedCompany('all');
+                        setSelectedTags([]);
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <X className="h-4 w-4" />
+                      Clear Filters
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="pt-6">
           <div className="space-y-4">
+            {showSmartLists && (
+              <SmartLists
+                tasks={tasks}
+                onFilterChange={handleSmartListFilter}
+                activeFilter={activeSmartList}
+              />
+            )}
+            {isSelectionMode && (
+              <BulkOperations
+                selectedTasks={selectedTasks}
+                tasks={tasks}
+                companies={companies}
+                tags={tags}
+                onTaskUpdate={onTaskUpdate}
+                onTaskDelete={onTaskDelete}
+                onClearSelection={clearSelection}
+              />
+            )}
             {showAddTask && (
               <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
                 <CardContent className="p-6">
@@ -885,6 +1188,32 @@ export function TaskList({
                         className="shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
                         rows={2}
                       />
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-1 block">Attachments</label>
+                        <FileAttachments
+                          attachments={newTaskAttachments}
+                          onAttachmentsChange={setNewTaskAttachments}
+                          maxFileSize={10}
+                          allowedTypes={['image/*', 'application/pdf', 'text/*', '.doc', '.docx', '.xls', '.xlsx']}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-1 block">Dependencies</label>
+                        <TaskDependencies
+                          currentTask={{ 
+                            id: 'new-task', 
+                            name: newTaskName || 'New Task',
+                            companyId: newTaskCompany,
+                            completed: false,
+                            createdAt: new Date(),
+                            priority: 'medium',
+                            status: 'todo'
+                          } as Task}
+                          allTasks={tasks}
+                          dependencies={newTaskDependencies}
+                          onDependenciesChange={setNewTaskDependencies}
+                        />
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -1166,6 +1495,48 @@ export function TaskList({
               />
               <label>Mark as completed</label>
             </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Attachments</label>
+              <FileAttachments
+                attachments={editingTask?.attachments?.map(att => ({
+                  id: att.id,
+                  name: att.name,
+                  size: att.size,
+                  type: att.type,
+                  url: att.url,
+                  uploadedAt: att.uploadedAt
+                })) || []}
+                onAttachmentsChange={(attachments) => {
+                  setEditingTask(prev => prev ? { 
+                    ...prev, 
+                    attachments: attachments.map(att => ({
+                      id: att.id,
+                      name: att.name,
+                      url: att.url,
+                      size: att.size,
+                      type: att.type,
+                      uploadedAt: att.uploadedAt,
+                      uploadedBy: 'current-user' // In a real app, get from auth context
+                    }))
+                  } : null);
+                }}
+                maxFileSize={10}
+                allowedTypes={['image/*', 'application/pdf', 'text/*', '.doc', '.docx', '.xls', '.xlsx']}
+              />
+            </div>
+            {!editingTask?.parentTaskId && (
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Dependencies</label>
+                <TaskDependencies
+                  currentTask={editingTask}
+                  allTasks={tasks}
+                  dependencies={editingTask?.dependencies || []}
+                  onDependenciesChange={(dependencies) => {
+                    setEditingTask(prev => prev ? { ...prev, dependencies } : null);
+                  }}
+                />
+              </div>
+            )}
             </>
           </div>
           <DialogFooter>

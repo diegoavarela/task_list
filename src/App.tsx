@@ -6,6 +6,8 @@ import type { Tag } from './types/tag';
 import { TaskList } from './components/tasks/TaskList';
 import { CompanyConfig } from './components/company/CompanyConfig';
 import { TagsPage } from './pages/Tags';
+import { TaskCalendar } from './components/calendar/TaskCalendar';
+import { TaskAnalytics } from './components/analytics/TaskAnalytics';
 import { Layout } from './components/layout/Layout';
 import { saveTasks, loadTasks, saveCompanies, loadCompanies, saveTags, loadTags } from './lib/storage';
 import { Toaster } from "@/components/ui/toaster"
@@ -13,7 +15,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { useToast } from "@/components/ui/use-toast"
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
-type Page = 'tasks' | 'companies' | 'tags';
+type Page = 'tasks' | 'companies' | 'tags' | 'calendar' | 'analytics';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('tasks');
@@ -58,6 +60,16 @@ export default function App() {
       key: '⌘/Ctrl + 3',
       callback: () => setCurrentPage('tags'),
       description: 'Switch to Tags page'
+    },
+    {
+      key: '⌘/Ctrl + 4',
+      callback: () => setCurrentPage('calendar'),
+      description: 'Switch to Calendar page'
+    },
+    {
+      key: '⌘/Ctrl + 5',
+      callback: () => setCurrentPage('analytics'),
+      description: 'Switch to Analytics page'
     }
   ];
 
@@ -115,6 +127,9 @@ export default function App() {
 
   const handleAddTask = (taskData: Omit<Task, 'id' | 'createdAt'>) => {
     const newTask: Task = {
+      priority: 'medium',
+      status: 'todo',
+      completed: false,
       ...taskData,
       id: crypto.randomUUID(),
       createdAt: new Date()
@@ -285,6 +300,30 @@ export default function App() {
             onUpdateCompany={handleUpdateCompany}
             onDeleteCompany={handleDeleteCompany}
           />
+        ) : currentPage === 'tags' ? (
+          <TagsPage
+            tags={tags}
+            onAddTag={handleAddTag}
+            onUpdateTag={handleUpdateTag}
+            onDeleteTag={handleDeleteTag}
+          />
+        ) : currentPage === 'calendar' ? (
+          <TaskCalendar
+            tasks={tasks}
+            onSelectTask={(task) => {
+              // Navigate to tasks and edit the selected task
+              setCurrentPage('tasks');
+              // You could add logic here to open the edit dialog for the selected task
+            }}
+            onSelectSlot={(slotInfo) => {
+              // Navigate to tasks and add a new task with the selected date
+              setCurrentPage('tasks');
+              setShowAddTask(true);
+              // You could pre-fill the date here
+            }}
+          />
+        ) : currentPage === 'analytics' ? (
+          <TaskAnalytics tasks={tasks} />
         ) : (
           <TagsPage
             tags={tags}

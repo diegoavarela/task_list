@@ -20,6 +20,8 @@ const serializeTask = (task: Task): SerializedTask => ({
 });
 
 const deserializeTask = (task: SerializedTask): Task => ({
+  priority: 'medium',
+  status: 'todo',
   ...task,
   createdAt: new Date(task.createdAt),
   dueDate: task.dueDate ? new Date(task.dueDate) : undefined,

@@ -1,4 +1,4 @@
-import { Save, CheckSquare, Building2, Download, FileJson, FileSpreadsheet, Hash, Menu, X } from 'lucide-react';
+import { Save, CheckSquare, Building2, Download, FileJson, FileSpreadsheet, Hash, Menu, X, Calendar, BarChart } from 'lucide-react';
 import { Footer } from './Footer';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -24,8 +24,8 @@ import type { ReactNode } from 'react';
 
 interface LayoutProps {
   children: ReactNode;
-  currentPage: 'tasks' | 'companies' | 'tags';
-  onPageChange: (page: 'tasks' | 'companies' | 'tags') => void;
+  currentPage: 'tasks' | 'companies' | 'tags' | 'calendar' | 'analytics';
+  onPageChange: (page: 'tasks' | 'companies' | 'tags' | 'calendar' | 'analytics') => void;
   onSave?: () => void;
   saveError?: string | null;
   tasks?: Task[];
@@ -218,6 +218,28 @@ export function Layout({
                 <Hash className="h-4 w-4" />
                 Tags
               </button>
+              <button
+                onClick={() => onPageChange('calendar')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  currentPage === 'calendar' 
+                    ? 'bg-background text-foreground shadow-sm' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                }`}
+              >
+                <Calendar className="h-4 w-4" />
+                Calendar
+              </button>
+              <button
+                onClick={() => onPageChange('analytics')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  currentPage === 'analytics' 
+                    ? 'bg-background text-foreground shadow-sm' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                }`}
+              >
+                <BarChart className="h-4 w-4" />
+                Analytics
+              </button>
             </nav>
 
             {/* Desktop Actions */}
@@ -360,6 +382,34 @@ export function Layout({
                 >
                   <Hash className="h-4 w-4" />
                   Tags
+                </button>
+                <button
+                  onClick={() => {
+                    onPageChange('calendar');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    currentPage === 'calendar' 
+                      ? 'bg-slate-100 text-slate-900 border border-slate-200/50' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <Calendar className="h-4 w-4" />
+                  Calendar
+                </button>
+                <button
+                  onClick={() => {
+                    onPageChange('analytics');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    currentPage === 'analytics' 
+                      ? 'bg-slate-100 text-slate-900 border border-slate-200/50' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <BarChart className="h-4 w-4" />
+                  Analytics
                 </button>
               </nav>
               <div className="flex items-center justify-between pt-2 border-t border-slate-200/50">
