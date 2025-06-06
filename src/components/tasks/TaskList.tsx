@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical, Check, Hash } from 'lucide-react';
+import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical, Check, Hash, FileText } from 'lucide-react';
 import type { Task } from '../../types/task';
 import type { Company } from '../../types/company';
 import type { Tag } from '../../types/tag';
@@ -7,6 +7,7 @@ import { TagSelector } from '@/components/tags/TagSelector';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { format, isToday, isTomorrow, isPast, startOfDay } from 'date-fns';
@@ -207,6 +208,18 @@ function SortableTask({
             <div className="task-content">
               <div className="task-text">
                 {task.name}
+                {task.notes && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <FileText className="h-3 w-3 ml-2 text-muted-foreground inline" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs text-sm">{task.notes}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
               {viewMode === 'normal' && (
                 <div className="task-meta">
@@ -387,6 +400,7 @@ export function TaskList({
   const [newTaskDate, setNewTaskDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [newTaskTime, setNewTaskTime] = useState('');
   const [newTaskTags, setNewTaskTags] = useState<string[]>([]);
+  const [newTaskNotes, setNewTaskNotes] = useState('');
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
@@ -398,6 +412,7 @@ export function TaskList({
   const [newSubtaskDueDate, setNewSubtaskDueDate] = useState('');
   const [newSubtaskDueTime, setNewSubtaskDueTime] = useState('');
   const [newSubtaskTags, setNewSubtaskTags] = useState<string[]>([]);
+  const [newSubtaskNotes, setNewSubtaskNotes] = useState('');
   const [viewMode, setViewMode] = useState<'normal' | 'compact'>('normal');
   const { toast } = useToast();
 
@@ -441,7 +456,8 @@ export function TaskList({
         subtasks: [],
         tagIds: newTaskTags,
         dueDate: new Date(newTaskDate),
-        dueTime: newTaskTime || undefined
+        dueTime: newTaskTime || undefined,
+        notes: newTaskNotes || undefined
       };
       onTaskAdd(newTask);
       setNewTaskName('');
@@ -449,6 +465,7 @@ export function TaskList({
       setNewTaskDate(format(new Date(), 'yyyy-MM-dd'));
       setNewTaskTime('');
       setNewTaskTags([]);
+      setNewTaskNotes('');
       toast({
         title: "Task added",
         description: "Your task has been added successfully.",
@@ -462,7 +479,8 @@ export function TaskList({
         ...editingTask,
         name: editingTask.name.trim(),
         completed: editingTask.completed,
-        createdAt: new Date(editingTask.createdAt)
+        createdAt: new Date(editingTask.createdAt),
+        notes: editingTask.notes
       };
       onTaskUpdate(editingTask.id, updatedTask);
       setEditingTask(null);
@@ -601,7 +619,8 @@ export function TaskList({
         parentTaskId,
         dueDate: newSubtaskDueDate ? new Date(newSubtaskDueDate) : undefined,
         dueTime: newSubtaskDueTime || undefined,
-        tagIds: newSubtaskTags
+        tagIds: newSubtaskTags,
+        notes: newSubtaskNotes || undefined
       };
       
       const updatedTask = {
@@ -618,6 +637,7 @@ export function TaskList({
       setNewSubtaskDueDate('');
       setNewSubtaskDueTime('');
       setNewSubtaskTags([]);
+      setNewSubtaskNotes('');
       setAddingSubtask(null);
       setExpandedTasks(prev => new Set([...prev, parentTaskId]));
       toast({
@@ -857,6 +877,13 @@ export function TaskList({
                         onTagsChange={setNewTaskTags}
                         placeholder="Add tags..."
                       />
+                      <Textarea
+                        value={newTaskNotes}
+                        onChange={(e) => setNewTaskNotes(e.target.value)}
+                        placeholder="Add notes or comments about this task..."
+                        className="shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                        rows={2}
+                      />
                     </div>
                   </div>
                 </CardContent>
@@ -971,6 +998,13 @@ export function TaskList({
                                   selectedTagIds={newSubtaskTags}
                                   onTagsChange={setNewSubtaskTags}
                                   placeholder="Add tags to subtask..."
+                                />
+                                <Textarea
+                                  value={newSubtaskNotes}
+                                  onChange={(e) => setNewSubtaskNotes(e.target.value)}
+                                  placeholder="Add notes to subtask..."
+                                  className="shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                                  rows={2}
                                 />
                               </div>
                             </div>
@@ -1112,6 +1146,16 @@ export function TaskList({
                 selectedTagIds={editingTask?.tagIds || []}
                 onTagsChange={(tagIds) => setEditingTask(prev => prev ? { ...prev, tagIds } : null)}
                 placeholder="Add tags..."
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Notes</label>
+              <Textarea
+                value={editingTask?.notes || ''}
+                onChange={(e) => setEditingTask(prev => prev ? { ...prev, notes: e.target.value } : null)}
+                placeholder="Add notes or comments about this task..."
+                className="shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                rows={3}
               />
             </div>
             <div className="flex items-center gap-2">

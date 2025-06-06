@@ -10,4 +10,5 @@ export interface Task {
   tagIds?: string[];
   dueDate?: Date;
   dueTime?: string; // Format: "HH:mm" (24-hour format)
+  notes?: string;
 } 
