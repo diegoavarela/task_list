@@ -561,6 +561,87 @@
     @apply bg-primary/20 text-primary;
   }
 
+  /* Mobile-Specific Optimizations */
+  @media (max-width: 640px) {
+    /* Disable hover effects on mobile */
+    .task-item:hover {
+      transform: none;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Improve touch targets */
+    .btn {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    /* Make inputs larger on mobile */
+    .input, textarea {
+      font-size: 16px; /* Prevents zoom on iOS */
+      min-height: 44px;
+    }
+
+    /* Stack form elements vertically */
+    .form-row {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    /* Hide non-essential elements on mobile */
+    .mobile-hidden {
+      display: none;
+    }
+
+    /* Ensure proper viewport handling */
+    body {
+      -webkit-text-size-adjust: 100%;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Improve scrolling on iOS */
+    .scroll-container {
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Better card spacing on mobile */
+    .card {
+      margin-bottom: 1rem;
+    }
+
+    /* Responsive text sizes */
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.25rem; }
+    h3 { font-size: 1.125rem; }
+  }
+
+  /* Tablet-Specific Optimizations */
+  @media (min-width: 641px) and (max-width: 1024px) {
+    /* Optimize for tablet layouts */
+    .container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+
+    /* Better spacing for tablet */
+    .task-item {
+      padding: 1rem;
+    }
+
+    /* Tablet-friendly navigation */
+    .tabs-trigger {
+      padding: 0.75rem 1rem;
+    }
+  }
+
+  /* High DPI display optimizations */
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    /* Crisp borders on retina displays */
+    .card, .btn, .input {
+      border-width: 0.5px;
+    }
+  }
+
   /* Mobile Responsive Styles */
   @media (max-width: 640px) {
     .task-item {

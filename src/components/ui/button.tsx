@@ -4,20 +4,20 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:shadow-md",
+          "bg-slate-900 text-white shadow-lg hover:bg-slate-800 hover:shadow-xl backdrop-blur-sm border border-slate-200/20",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+          "bg-red-500 text-white shadow-lg hover:bg-red-600 hover:shadow-xl backdrop-blur-sm border border-red-200/20",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:border-accent",
+          "border border-slate-200 bg-white/80 backdrop-blur-sm hover:bg-white hover:text-slate-900 hover:border-slate-300 shadow-sm hover:shadow-md",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-slate-100 text-slate-900 hover:bg-slate-200 shadow-sm hover:shadow-md backdrop-blur-sm border border-slate-200/50",
+        ghost: "hover:bg-slate-100/80 hover:text-slate-900 backdrop-blur-sm",
+        link: "text-slate-600 underline-offset-4 hover:underline hover:text-slate-900",
       },
       size: {
         default: "h-10 px-4 py-2",

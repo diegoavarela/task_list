@@ -156,14 +156,14 @@ export function CompanyConfig({ companies, onAddCompany, onUpdateCompany, onDele
       {showAddForm ? (
         <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
           <CardHeader className="pb-4">
-            <CardTitle className="text-xl font-semibold flex items-center gap-2">
+            <CardTitle className="text-lg sm:text-xl font-semibold flex items-center gap-2">
               <Building2 className="h-5 w-5 text-primary" />
               Create New Company
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <Input
                   placeholder="Company name..."
                   value={newCompanyName}
@@ -173,31 +173,34 @@ export function CompanyConfig({ companies, onAddCompany, onUpdateCompany, onDele
                       handleAddCompany();
                     }
                   }}
-                  className="flex-1"
+                  className="flex-1 min-w-0"
                   autoFocus
                 />
-                <ColorPicker
-                  value={newCompanyColor}
-                  onChange={setNewCompanyColor}
-                />
-                <Button 
-                  onClick={handleAddCompany}
-                  disabled={!newCompanyName.trim()}
-                  className="gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Create
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    setShowAddForm(false);
-                    setNewCompanyName('');
-                    setNewCompanyColor(COMPANY_COLORS[0]);
-                  }}
-                >
-                  Cancel
-                </Button>
+                <div className="flex sm:flex-row gap-2 sm:gap-3">
+                  <ColorPicker
+                    value={newCompanyColor}
+                    onChange={setNewCompanyColor}
+                  />
+                  <Button 
+                    onClick={handleAddCompany}
+                    disabled={!newCompanyName.trim()}
+                    className="gap-2 flex-1 sm:flex-none"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline">Create</span>
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setShowAddForm(false);
+                      setNewCompanyName('');
+                      setNewCompanyColor(COMPANY_COLORS[0]);
+                    }}
+                    className="flex-1 sm:flex-none"
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </div>
               {newCompanyName.trim() && (
                 <div className="pt-2">
@@ -221,11 +224,11 @@ export function CompanyConfig({ companies, onAddCompany, onUpdateCompany, onDele
       ) : (
         <Card>
           <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-2xl font-semibold">Companies</CardTitle>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <CardTitle className="text-xl sm:text-2xl font-semibold">Companies</CardTitle>
               <Button
                 onClick={() => setShowAddForm(true)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 self-start sm:self-auto"
               >
                 <Plus className="h-4 w-4" />
                 Add Company
@@ -257,7 +260,7 @@ export function CompanyConfig({ companies, onAddCompany, onUpdateCompany, onDele
               {companies.map((company) => (
                 <div 
                   key={company.id} 
-                  className="group flex items-center justify-between p-4 rounded-lg border bg-card transition-all duration-200 hover:shadow-sm hover:border-border"
+                  className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border bg-card transition-all duration-200 hover:shadow-sm hover:border-border gap-3 sm:gap-0"
                 >
                   <div className="flex items-center gap-4">
                     <div
@@ -284,7 +287,7 @@ export function CompanyConfig({ companies, onAddCompany, onUpdateCompany, onDele
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity self-end sm:self-auto">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -325,12 +328,12 @@ export function CompanyConfig({ companies, onAddCompany, onUpdateCompany, onDele
 
       {/* Edit Company Dialog */}
       <Dialog open={!!editingCompany} onOpenChange={() => setEditingCompany(null)}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="w-[95vw] max-w-[425px] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Company</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Input
                 value={editingCompany?.name || ''}
                 onChange={(e) => setEditingCompany(prev => prev ? { ...prev, name: e.target.value } : null)}
@@ -378,7 +381,7 @@ export function CompanyConfig({ companies, onAddCompany, onUpdateCompany, onDele
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="w-[95vw] max-w-[425px] sm:w-full">
           <DialogHeader>
             <DialogTitle>Delete Company</DialogTitle>
             <DialogDescription>

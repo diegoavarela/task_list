@@ -1,4 +1,6 @@
-import { Save, CheckSquare, Building2, Download, FileJson, FileSpreadsheet, Hash } from 'lucide-react';
+import { Save, CheckSquare, Building2, Download, FileJson, FileSpreadsheet, Hash, Menu, X } from 'lucide-react';
+import { Footer } from './Footer';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -144,70 +146,82 @@ export function Layout({
   isSaving,
   lastSaved 
 }: LayoutProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="header">
-        <div className="header-content">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-7 w-7 text-primary relative"
-              >
-                <path d="M9 11l3 3L22 4" />
-                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
-              </svg>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex flex-col">
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-slate-200/50 shadow-sm">
+        <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4 max-w-6xl">
+          <div className="flex items-center justify-between">
+            {/* Logo and Title */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="relative">
+                <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-6 w-6 sm:h-7 sm:w-7 text-primary relative"
+                >
+                  <path d="M9 11l3 3L22 4" />
+                  <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-lg sm:text-xl font-semibold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                  The Freelo List
+                </h1>
+                {lastSaved && (
+                  <div className="hidden sm:block text-xs text-slate-500">
+                    Auto-saved {format(lastSaved, 'HH:mm:ss')}
+                  </div>
+                )}
+              </div>
             </div>
-            <div>
-              <h1 className="header-title">The Freelo List</h1>
-              {lastSaved && (
-                <div className="text-xs text-muted-foreground">
-                  Auto-saved {format(lastSaved, 'HH:mm:ss')}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <nav className="tabs-list">
+
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center gap-1 bg-slate-100/80 backdrop-blur-sm rounded-xl p-1 border border-slate-200/50">
               <button
                 onClick={() => onPageChange('tasks')}
-                className={`tabs-trigger ${
-                  currentPage === 'tasks' ? 'data-[state=active]:bg-background' : ''
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  currentPage === 'tasks' 
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50' 
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                 }`}
-                data-state={currentPage === 'tasks' ? 'active' : 'inactive'}
               >
-                <CheckSquare className="h-4 w-4 mr-2" />
+                <CheckSquare className="h-4 w-4" />
                 Tasks
               </button>
               <button
                 onClick={() => onPageChange('companies')}
-                className={`tabs-trigger ${
-                  currentPage === 'companies' ? 'data-[state=active]:bg-background' : ''
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  currentPage === 'companies' 
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50' 
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                 }`}
-                data-state={currentPage === 'companies' ? 'active' : 'inactive'}
               >
-                <Building2 className="h-4 w-4 mr-2" />
+                <Building2 className="h-4 w-4" />
                 Companies
               </button>
               <button
                 onClick={() => onPageChange('tags')}
-                className={`tabs-trigger ${
-                  currentPage === 'tags' ? 'data-[state=active]:bg-background' : ''
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  currentPage === 'tags' 
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50' 
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                 }`}
-                data-state={currentPage === 'tags' ? 'active' : 'inactive'}
               >
-                <Hash className="h-4 w-4 mr-2" />
+                <Hash className="h-4 w-4" />
                 Tags
               </button>
             </nav>
-            <div className="flex items-center gap-2">
+
+            {/* Desktop Actions */}
+            <div className="hidden md:flex items-center gap-2">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -272,12 +286,101 @@ export function Layout({
                 </Tooltip>
               </TooltipProvider>
             </div>
+
+            {/* Mobile Menu Button */}
+            <div className="flex md:hidden items-center gap-2">
+              {onSave && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onSave}
+                  disabled={isSaving}
+                  className="relative h-8 w-8"
+                >
+                  {isSaving ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="h-8 w-8"
+              >
+                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
+            </div>
           </div>
+
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="md:hidden mt-4 pb-4 space-y-2">
+              <nav className="flex flex-col gap-2">
+                <button
+                  onClick={() => {
+                    onPageChange('tasks');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    currentPage === 'tasks' 
+                      ? 'bg-slate-100 text-slate-900 border border-slate-200/50' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <CheckSquare className="h-4 w-4" />
+                  Tasks
+                </button>
+                <button
+                  onClick={() => {
+                    onPageChange('companies');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    currentPage === 'companies' 
+                      ? 'bg-slate-100 text-slate-900 border border-slate-200/50' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <Building2 className="h-4 w-4" />
+                  Companies
+                </button>
+                <button
+                  onClick={() => {
+                    onPageChange('tags');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    currentPage === 'tags' 
+                      ? 'bg-slate-100 text-slate-900 border border-slate-200/50' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <Hash className="h-4 w-4" />
+                  Tags
+                </button>
+              </nav>
+              <div className="flex items-center justify-between pt-2 border-t border-slate-200/50">
+                <div className="flex items-center gap-2">
+                  <KeyboardShortcuts />
+                  <ThemeToggle />
+                  <ExportDropdown tasks={tasks} companies={companies} />
+                </div>
+                {lastSaved && (
+                  <div className="text-xs text-slate-500">
+                    {format(lastSaved, 'HH:mm:ss')}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </header>
-      <main className="container py-6 max-w-6xl">
+      <main className="flex-1 container mx-auto py-4 sm:py-6 lg:py-8 px-4 sm:px-6 max-w-6xl">
         {saveError && (
-          <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive flex items-center gap-2">
+          <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200/50 text-red-700 flex items-center gap-3 shadow-sm backdrop-blur-sm bg-red-50/90">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
@@ -286,7 +389,7 @@ export function Layout({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="h-4 w-4"
+              className="h-5 w-5 text-red-500"
             >
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
@@ -297,6 +400,7 @@ export function Layout({
         )}
         {children}
       </main>
+      <Footer />
     </div>
   );
 } 
