@@ -67,56 +67,74 @@ export function CompanyList({ companies, onAddCompany, onEditCompany, onDeleteCo
   }
 
   return (
-    <div className="space-y-8">
-      <Card className="rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01]">
-        <CardHeader className="bg-gradient-to-r from-gray-50 to-white rounded-t-lg">
-          <CardTitle>Add New Company</CardTitle>
+    <div className="space-y-6">
+      <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl font-semibold">Add New Company</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
+          <div className="flex gap-3">
             <Input
-              placeholder="Company name"
+              placeholder="Enter company name..."
               value={newCompanyName}
               onChange={(e) => setNewCompanyName(e.target.value)}
-              className="flex-1 h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && newCompanyName.trim()) {
+                  handleAddCompany();
+                }
+              }}
+              className="flex-1"
+              autoFocus
             />
             <Button 
-              onClick={handleAddCompany} 
-              className="border-2 border-black text-black hover:bg-black hover:text-white h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
-              type="button"
+              onClick={handleAddCompany}
+              disabled={!newCompanyName.trim()}
+              className="gap-2"
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="h-4 w-4" />
               Add Company
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01]">
-        <CardHeader className="bg-gradient-to-r from-gray-50 to-white rounded-t-lg">
-          <CardTitle>Companies</CardTitle>
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl font-semibold">Companies</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {companies.map((company) => (
-              <div 
-                key={company.id} 
-                className="rounded-lg border bg-card shadow-sm hover:shadow-2xl transition-all duration-300 hover:border-gray-400 hover:scale-[1.03] hover:bg-gray-50/90 cursor-pointer group"
-              >
-                <div className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors duration-300 group-hover:scale-110" />
-                    <span className="text-lg group-hover:text-primary transition-colors duration-300 font-medium group-hover:scale-105">{company.name}</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      {format(new Date(company.createdAt), 'MMM d, yyyy')}
+          <div className="space-y-3">
+            {companies.length === 0 ? (
+              <div className="empty-state py-8">
+                <Building2 className="empty-state-icon" />
+                <h3 className="empty-state-title">No companies yet</h3>
+                <p className="empty-state-description">
+                  Add your first company to get started organizing your tasks.
+                </p>
+              </div>
+            ) : (
+              companies.map((company) => (
+                <div 
+                  key={company.id} 
+                  className="company-item group"
+                >
+                  <div className="flex items-center">
+                    <div className="company-color-indicator"
+                         style={{ backgroundColor: company.color }} />
+                    <Building2 className="h-5 w-5 text-muted-foreground mr-3" />
+                    <div>
+                      <div className="company-name">{company.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Created {format(new Date(company.createdAt), 'MMM d, yyyy')}
+                      </div>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => setEditingCompany({ id: company.id, name: company.name })}
-                      className="hover:bg-gray-100 transition-all duration-300 hover:scale-125 hover:shadow-lg"
+                      className="h-8 w-8"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -137,14 +155,14 @@ export function CompanyList({ companies, onAddCompany, onEditCompany, onDeleteCo
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDeleteCompany(company.id)}
-                      className="hover:bg-red-50 transition-all duration-300 hover:scale-125 hover:shadow-lg"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
@@ -172,7 +190,7 @@ export function CompanyList({ companies, onAddCompany, onEditCompany, onDeleteCo
             </Button>
             <Button 
               onClick={handleEditCompany}
-              className="border-2 border-black text-black hover:bg-black hover:text-white transition-all duration-300 hover:scale-[1.02]"
+              disabled={!editingCompany?.name.trim()}
             >
               Save Changes
             </Button>
