@@ -137,7 +137,7 @@ function SortableTask({
   return (
     <div ref={setNodeRef} style={style} className={cn(
       "space-y-2",
-      isSubtask && "ml-8 border-l-2 border-gray-200 pl-4"
+      isSubtask && "ml-4 sm:ml-8 border-l-2 border-gray-200 pl-3 sm:pl-4"
     )}>
       <div 
         className={cn(
@@ -155,12 +155,12 @@ function SortableTask({
           }
         }}
       >
-        <div className="flex items-start justify-between w-full gap-4">
-          <div className="flex items-center gap-2 flex-1">
+        <div className="flex items-start justify-between w-full gap-2 sm:gap-4">
+          <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
             <button
               {...attributes}
               {...listeners}
-              className="hover:scale-110 transition-all duration-300 cursor-grab active:cursor-grabbing"
+              className="hover:scale-110 transition-all duration-300 cursor-grab active:cursor-grabbing hidden sm:block"
             >
               <GripVertical className="h-3.5 w-3.5 text-gray-400" />
             </button>
@@ -196,7 +196,7 @@ function SortableTask({
                 onToggleCompletion(task);
               }}
               className={cn(
-                "task-checkbox",
+                "task-checkbox touch-action-manipulation",
                 isSubtask && "subtask-checkbox"
               )}
             >
@@ -222,18 +222,18 @@ function SortableTask({
                 )}
               </div>
               {viewMode === 'normal' && (
-                <div className="task-meta">
+                <div className="task-meta flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
                   {!isSubtask && (
                     <div 
-                      className="task-company-badge"
+                      className="task-company-badge whitespace-nowrap"
                       style={{ 
                         backgroundColor: `${getCompanyColor(task.companyId)}15`,
                         color: getCompanyColor(task.companyId),
                         border: `1px solid ${getCompanyColor(task.companyId)}30`
                       }}
                     >
-                      <Building2 className="h-3 w-3 mr-1" />
-                      {getCompanyName(task.companyId)}
+                      <Building2 className="h-3 w-3 mr-1 flex-shrink-0" />
+                      <span className="truncate max-w-[120px] sm:max-w-none">{getCompanyName(task.companyId)}</span>
                     </div>
                   )}
                   
@@ -246,15 +246,15 @@ function SortableTask({
                         return (
                           <div
                             key={tagId}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium tag-badge"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium tag-badge whitespace-nowrap"
                             style={{ 
                               backgroundColor: `${tag.color}15`,
                               color: tag.color,
                               border: `1px solid ${tag.color}30`
                             }}
                           >
-                            <Hash className="h-2.5 w-2.5" />
-                            {tag.name}
+                            <Hash className="h-2.5 w-2.5 flex-shrink-0" />
+                            <span className="truncate max-w-[80px] sm:max-w-none">{tag.name}</span>
                           </div>
                         );
                       })}
@@ -262,8 +262,8 @@ function SortableTask({
                   )}
                   
                   {/* Due date for subtasks and main tasks, or created date for main tasks without due date */}
-                  <div className="task-date">
-                    <Calendar className="h-3 w-3" />
+                  <div className="task-date whitespace-nowrap">
+                    <Calendar className="h-3 w-3 flex-shrink-0" />
                     {task.dueDate ? (
                       <span className={cn(
                         "text-xs",
@@ -303,7 +303,7 @@ function SortableTask({
             </div>
           </div>
 
-          <div className="task-actions flex items-center gap-2 shrink-0">
+          <div className="task-actions flex items-center gap-1 sm:gap-2 shrink-0">
           {!isSubtask && (
             <TooltipProvider>
               <Tooltip>
@@ -315,7 +315,7 @@ function SortableTask({
                       e.stopPropagation();
                       onAddSubtask(task.id);
                     }}
-                    className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                    className="h-8 w-8 sm:h-8 sm:w-8 p-1.5 sm:p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 touch-action-manipulation"
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -337,7 +337,7 @@ function SortableTask({
                     e.stopPropagation();
                     onEdit(task);
                   }}
-                  className="h-8 w-8"
+                  className="h-8 w-8 sm:h-8 sm:w-8 p-1.5 sm:p-2 touch-action-manipulation"
                 >
                   <Edit2 className="h-4 w-4" />
                 </Button>
@@ -358,7 +358,7 @@ function SortableTask({
                     e.stopPropagation();
                     onDelete(task.id);
                   }}
-                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  className="h-8 w-8 sm:h-8 sm:w-8 p-1.5 sm:p-2 text-destructive hover:text-destructive touch-action-manipulation"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -758,21 +758,21 @@ export function TaskList({
     <div className="space-y-6">
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <CardTitle className="text-2xl font-semibold">Tasks</CardTitle>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto">
               <Button
                 variant={showAddTask ? "default" : "outline"}
                 onClick={() => setShowAddTask(!showAddTask)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 touch-action-manipulation"
               >
                 <Plus className="h-4 w-4" />
-                {showAddTask ? 'Cancel' : 'Add Task'}
+                <span className="hidden sm:inline">{showAddTask ? 'Cancel' : 'Add Task'}</span>
               </Button>
               <Button
                 variant="ghost"
                 onClick={() => setViewMode(viewMode === 'normal' ? 'compact' : 'normal')}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 hidden sm:flex"
                 title={`Switch to ${viewMode === 'normal' ? 'compact' : 'normal'} view`}
               >
                 {viewMode === 'normal' ? (
@@ -784,7 +784,7 @@ export function TaskList({
               <Button
                 variant="ghost"
                 onClick={() => setShowCompleted(!showCompleted)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 touch-action-manipulation"
                 title={showCompleted ? "Hide completed tasks" : "Show completed tasks"}
               >
                 {showCompleted ? (
@@ -792,10 +792,10 @@ export function TaskList({
                 ) : (
                   <EyeOff className="h-4 w-4" />
                 )}
-                {showCompleted ? 'Hide Completed' : 'Show Completed'}
+                <span className="hidden sm:inline">{showCompleted ? 'Hide Completed' : 'Show Completed'}</span>
               </Button>
               <Select value={selectedCompany} onValueChange={setSelectedCompany}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Filter by company" />
                 </SelectTrigger>
                 <SelectContent>
@@ -810,7 +810,7 @@ export function TaskList({
               <Button
                 variant="ghost"
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 hidden lg:flex"
               >
                 <Calendar className="h-4 w-4" />
                 {sortOrder === 'asc' ? 'Oldest First' : 'Newest First'}
@@ -829,13 +829,13 @@ export function TaskList({
                       placeholder="What needs to be done?"
                       value={newTaskName}
                       onChange={(e) => setNewTaskName(e.target.value)}
-                      className="text-base"
+                      className="text-base w-full"
                       autoFocus
                     />
                     <div className="grid grid-cols-1 gap-3">
-                      <div className="flex gap-3">
+                      <div className="flex flex-col sm:flex-row gap-3">
                         <Select value={newTaskCompany} onValueChange={setNewTaskCompany}>
-                          <SelectTrigger className="w-[200px]">
+                          <SelectTrigger className="w-full sm:w-[200px]">
                             <SelectValue placeholder="Select company" />
                           </SelectTrigger>
                           <SelectContent>
@@ -850,14 +850,14 @@ export function TaskList({
                           type="date"
                           value={newTaskDate}
                           onChange={(e) => setNewTaskDate(e.target.value)}
-                          className="w-[140px]"
+                          className="w-full sm:w-[140px]"
                         />
                         <Input
                           type="time"
                           value={newTaskTime}
                           onChange={(e) => setNewTaskTime(e.target.value)}
                           placeholder="Optional time"
-                          className="w-[120px]"
+                          className="w-full sm:w-[120px]"
                         />
                         <Button 
                           onClick={() => {
@@ -902,7 +902,7 @@ export function TaskList({
                   <div key={task.id}>
                     {renderTask(task)}
                     {!task.parentTaskId && expandedTasks.has(task.id) && task.subtasks && task.subtasks.length > 0 && (
-                      <div className="ml-8 space-y-2">
+                      <div className="ml-4 sm:ml-8 space-y-2">
                         <div className="subtask-list">
                           <DndContext
                             sensors={sensors}
@@ -936,7 +936,7 @@ export function TaskList({
                       </div>
                     )}
                     {!task.parentTaskId && addingSubtask === task.id && (
-                      <div className="ml-8 mt-3">
+                      <div className="ml-4 sm:ml-8 mt-3">
                         <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
                           <CardContent className="p-4">
                             <div className="space-y-3">
@@ -954,20 +954,20 @@ export function TaskList({
                                 autoFocus
                               />
                               <div className="grid grid-cols-1 gap-3">
-                                <div className="flex gap-2">
+                                <div className="flex flex-col sm:flex-row gap-2">
                                   <Input
                                     type="date"
                                     value={newSubtaskDueDate}
                                     onChange={(e) => setNewSubtaskDueDate(e.target.value)}
                                     placeholder="Due date (optional)"
-                                    className="h-9 flex-1"
+                                    className="h-9 w-full sm:flex-1"
                                   />
                                   <Input
                                     type="time"
                                     value={newSubtaskDueTime}
                                     onChange={(e) => setNewSubtaskDueTime(e.target.value)}
                                     placeholder="Time (optional)"
-                                    className="h-9 w-[120px]"
+                                    className="h-9 w-full sm:w-[120px]"
                                   />
                                   <Button
                                     variant="default"
@@ -1035,11 +1035,11 @@ export function TaskList({
       </Card>
 
       <Dialog open={!!editingTask} onOpenChange={() => setEditingTask(null)}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="w-[95vw] max-w-[425px] sm:w-full">
           <DialogHeader>
             <DialogTitle>Edit {editingTask?.parentTaskId ? 'Subtask' : 'Task'}</DialogTitle>
           </DialogHeader>
-          <div className="py-4 space-y-4">
+          <div className="py-4 space-y-4 dialog-body">
             <Input
               value={editingTask?.name || ''}
               onChange={(e) => setEditingTask(prev => prev ? { ...prev, name: e.target.value } : null)}
@@ -1048,7 +1048,7 @@ export function TaskList({
             />
             {editingTask?.parentTaskId ? (
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</label>
                     <Input
@@ -1079,7 +1079,7 @@ export function TaskList({
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-1 block">Company</label>
                     <select
@@ -1108,7 +1108,7 @@ export function TaskList({
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</label>
                     <Input
@@ -1188,7 +1188,7 @@ export function TaskList({
       </Dialog>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="w-[95vw] max-w-[425px] sm:w-full">
           <DialogHeader>
             <DialogTitle>Delete Task</DialogTitle>
             <DialogDescription>
