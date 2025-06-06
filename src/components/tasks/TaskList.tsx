@@ -948,50 +948,62 @@ export function TaskList({
               placeholder="Task name"
               className="shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
             />
-            <div className="grid grid-cols-2 gap-3">
-              {!editingTask?.parentTaskId && (
-                <select
-                  value={editingTask?.companyId || ''}
-                  onChange={(e) => setEditingTask(prev => prev ? { ...prev, companyId: e.target.value } : null)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
-                >
-                  <option value="">Select company</option>
-                  {companies.map((company) => (
-                    <option key={company.id} value={company.id}>
-                      {company.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {editingTask?.parentTaskId ? (
-                <Input
-                  type="date"
-                  value={editingTask?.dueDate ? format(new Date(editingTask.dueDate), 'yyyy-MM-dd') : ''}
-                  onChange={(e) => setEditingTask(prev => prev ? { 
-                    ...prev, 
-                    dueDate: e.target.value ? new Date(e.target.value) : undefined
-                  } : null)}
-                  placeholder="Due date (optional)"
-                  className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
-                />
-              ) : (
-                <Input
-                  type="date"
-                  value={editingTask?.createdAt ? format(new Date(editingTask.createdAt), 'yyyy-MM-dd') : ''}
-                  onChange={(e) => setEditingTask(prev => prev ? { 
-                    ...prev, 
-                    createdAt: new Date(e.target.value)
-                  } : null)}
-                  className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
-                />
-              )}
+            {editingTask?.parentTaskId ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</label>
+                  <Input
+                    type="date"
+                    value={editingTask?.dueDate ? format(new Date(editingTask.dueDate), 'yyyy-MM-dd') : ''}
+                    onChange={(e) => setEditingTask(prev => prev ? { 
+                      ...prev, 
+                      dueDate: e.target.value ? new Date(e.target.value) : undefined
+                    } : null)}
+                    placeholder="Due date (optional)"
+                    className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">Company</label>
+                  <select
+                    value={editingTask?.companyId || ''}
+                    onChange={(e) => setEditingTask(prev => prev ? { ...prev, companyId: e.target.value } : null)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                  >
+                    <option value="">Select company</option>
+                    {companies.map((company) => (
+                      <option key={company.id} value={company.id}>
+                        {company.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">Created Date</label>
+                  <Input
+                    type="date"
+                    value={editingTask?.createdAt ? format(new Date(editingTask.createdAt), 'yyyy-MM-dd') : ''}
+                    onChange={(e) => setEditingTask(prev => prev ? { 
+                      ...prev, 
+                      createdAt: new Date(e.target.value)
+                    } : null)}
+                    className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                  />
+                </div>
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Tags</label>
+              <TagSelector
+                tags={tags}
+                selectedTagIds={editingTask?.tagIds || []}
+                onTagsChange={(tagIds) => setEditingTask(prev => prev ? { ...prev, tagIds } : null)}
+                placeholder="Add tags..."
+              />
             </div>
-            <TagSelector
-              tags={tags}
-              selectedTagIds={editingTask?.tagIds || []}
-              onTagsChange={(tagIds) => setEditingTask(prev => prev ? { ...prev, tagIds } : null)}
-              placeholder="Add tags..."
-            />
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
