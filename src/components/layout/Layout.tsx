@@ -1,4 +1,4 @@
-import { Save, CheckSquare, Building2, Download, FileJson, FileSpreadsheet } from 'lucide-react';
+import { Save, CheckSquare, Building2, Download, FileJson, FileSpreadsheet, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -22,8 +22,8 @@ import type { ReactNode } from 'react';
 
 interface LayoutProps {
   children: ReactNode;
-  currentPage: 'tasks' | 'companies';
-  onPageChange: (page: 'tasks' | 'companies') => void;
+  currentPage: 'tasks' | 'companies' | 'tags';
+  onPageChange: (page: 'tasks' | 'companies' | 'tags') => void;
   onSave?: () => void;
   saveError?: string | null;
   tasks?: Task[];
@@ -195,6 +195,16 @@ export function Layout({
               >
                 <Building2 className="h-4 w-4 mr-2" />
                 Companies
+              </button>
+              <button
+                onClick={() => onPageChange('tags')}
+                className={`tabs-trigger ${
+                  currentPage === 'tags' ? 'data-[state=active]:bg-background' : ''
+                }`}
+                data-state={currentPage === 'tags' ? 'active' : 'inactive'}
+              >
+                <Hash className="h-4 w-4 mr-2" />
+                Tags
               </button>
             </nav>
             <div className="flex items-center gap-2">

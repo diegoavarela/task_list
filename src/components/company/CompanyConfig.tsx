@@ -198,7 +198,8 @@ export function CompanyConfig({ companies, onAddCompany, onUpdateCompany, onDele
                   <TooltipTrigger asChild>
                     <Button 
                       onClick={handleAddCompany} 
-                      className="border-2 border-foreground text-foreground hover:bg-foreground hover:text-background h-10"
+                      disabled={!newCompanyName.trim()}
+                      className="gap-2"
                       type="button"
                     >
                       <Plus className="mr-2 h-4 w-4" />

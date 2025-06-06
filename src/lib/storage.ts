@@ -1,27 +1,29 @@
 import type { Task } from '../types/task';
 import type { Company } from '../types/company';
+import type { Tag } from '../types/tag';
 
 const TASKS_KEY = 'tasks';
 const COMPANIES_KEY = 'companies';
+const TAGS_KEY = 'tags';
 
-type SerializedTask = Omit<Task, 'createdAt' | 'deadline' | 'subtasks'> & {
+type SerializedTask = Omit<Task, 'createdAt' | 'dueDate' | 'subtasks'> & {
   createdAt: string;
-  deadline?: string;
-  subtasks: SerializedTask[];
+  dueDate?: string;
+  subtasks?: SerializedTask[];
 };
 
 const serializeTask = (task: Task): SerializedTask => ({
   ...task,
   createdAt: task.createdAt.toISOString(),
-  deadline: task.deadline?.toISOString(),
-  subtasks: task.subtasks.map(serializeTask)
+  dueDate: task.dueDate?.toISOString(),
+  subtasks: task.subtasks?.map(serializeTask)
 });
 
 const deserializeTask = (task: SerializedTask): Task => ({
   ...task,
   createdAt: new Date(task.createdAt),
-  deadline: task.deadline ? new Date(task.deadline) : undefined,
-  subtasks: task.subtasks.map(deserializeTask)
+  dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+  subtasks: task.subtasks?.map(deserializeTask) || []
 });
 
 export const saveTasks = (tasks: Task[]): void => {
@@ -88,6 +90,47 @@ export const loadCompanies = (): Company[] => {
     return loadedCompanies;
   } catch (error) {
     console.error('Error loading companies:', error);
+    return [];
+  }
+};
+
+type SerializedTag = Omit<Tag, 'createdAt'> & {
+  createdAt: string;
+};
+
+const serializeTag = (tag: Tag): SerializedTag => ({
+  ...tag,
+  createdAt: tag.createdAt.toISOString()
+});
+
+const deserializeTag = (tag: SerializedTag): Tag => ({
+  ...tag,
+  createdAt: new Date(tag.createdAt)
+});
+
+export const saveTags = (tags: Tag[]): void => {
+  try {
+    const serializedTags = tags.map(serializeTag);
+    localStorage.setItem(TAGS_KEY, JSON.stringify(serializedTags));
+    console.log('Tags saved successfully:', tags.length);
+  } catch (error) {
+    console.error('Error saving tags:', error);
+  }
+};
+
+export const loadTags = (): Tag[] => {
+  try {
+    const tags = localStorage.getItem(TAGS_KEY);
+    if (!tags) {
+      console.log('No tags found in storage');
+      return [];
+    }
+    const parsedTags = JSON.parse(tags) as SerializedTag[];
+    const loadedTags = parsedTags.map(deserializeTag);
+    console.log('Tags loaded successfully:', loadedTags.length);
+    return loadedTags;
+  } catch (error) {
+    console.error('Error loading tags:', error);
     return [];
   }
 }; 

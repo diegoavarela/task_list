@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical, Check } from 'lucide-react';
+import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical, Check, Hash } from 'lucide-react';
 import type { Task } from '../../types/task';
 import type { Company } from '../../types/company';
+import type { Tag } from '../../types/tag';
+import { TagSelector } from '@/components/tags/TagSelector';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -43,6 +45,7 @@ import { cn } from "@/lib/utils";
 interface TaskListProps {
   tasks: Task[];
   companies: Company[];
+  tags: Tag[];
   onTaskUpdate: (taskId: string, updates: Partial<Task>) => void;
   onTaskDelete: (taskId: string) => void;
   onTaskAdd: (task: Omit<Task, 'id' | 'createdAt'>) => void;
@@ -63,6 +66,7 @@ interface SortableTaskProps {
   expandedTasks: Set<string>;
   getCompanyName: (companyId: string) => string;
   getCompanyColor: (companyId: string) => string;
+  tags: Tag[];
 }
 
 function SortableTask({
@@ -76,6 +80,8 @@ function SortableTask({
   expandedTasks,
   getCompanyName,
   getCompanyColor,
+  tags,
+  viewMode,
 }: SortableTaskProps) {
   const {
     attributes,
@@ -99,9 +105,9 @@ function SortableTask({
     )}>
       <div 
         className={cn(
-          "task-item",
+          "task-item group",
           task.completed && 'completed',
-          isSubtask && 'ml-8 border-l-2 border-border pl-4'
+          isSubtask && 'is-subtask'
         )}
         onClick={(e) => {
           if (!(e.target as HTMLElement).closest('button')) {
@@ -113,82 +119,139 @@ function SortableTask({
           }
         }}
       >
-        <div className="flex items-center gap-2">
-          <button
-            {...attributes}
-            {...listeners}
-            className="hover:scale-110 transition-all duration-300 cursor-grab active:cursor-grabbing"
-          >
-            <GripVertical className="h-3.5 w-3.5 text-gray-400" />
-          </button>
+        <div className="flex items-start justify-between w-full gap-4">
+          <div className="flex items-center gap-2 flex-1">
+            <button
+              {...attributes}
+              {...listeners}
+              className="hover:scale-110 transition-all duration-300 cursor-grab active:cursor-grabbing"
+            >
+              <GripVertical className="h-3.5 w-3.5 text-gray-400" />
+            </button>
 
-          {!isSubtask && task.subtasks && task.subtasks.length > 0 && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleExpansion(task.id);
-                    }}
-                    className="hover:scale-110 transition-all duration-300"
-                  >
-                    {expandedTasks.has(task.id) ? (
-                      <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
-                    ) : (
-                      <ChevronRight className="h-3.5 w-3.5 text-gray-500" />
-                    )}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{expandedTasks.has(task.id) ? 'Collapse subtasks' : 'Expand subtasks'}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleCompletion(task);
-            }}
-            className={cn(
-              "task-checkbox",
-              isSubtask && "subtask-checkbox"
+            {!isSubtask && task.subtasks && task.subtasks.length > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleExpansion(task.id);
+                      }}
+                      className="hover:scale-110 transition-all duration-300"
+                    >
+                      {expandedTasks.has(task.id) ? (
+                        <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
+                      ) : (
+                        <ChevronRight className="h-3.5 w-3.5 text-gray-500" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{expandedTasks.has(task.id) ? 'Collapse subtasks' : 'Expand subtasks'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
-          >
-            {task.completed && (
-              <Check className="h-3 w-3 text-white" />
-            )}
-          </button>
 
-          <div className="task-content">
-            <div className="task-text">
-              {task.name}
-            </div>
-            {!isSubtask && (
-              <div className="task-meta">
-                <div 
-                  className="task-company-badge"
-                  style={{ 
-                    backgroundColor: `${getCompanyColor(task.companyId)}15`,
-                    color: getCompanyColor(task.companyId),
-                    border: `1px solid ${getCompanyColor(task.companyId)}30`
-                  }}
-                >
-                  <Building2 className="h-3 w-3 mr-1" />
-                  {getCompanyName(task.companyId)}
-                </div>
-                <div className="task-date">
-                  <Calendar className="h-3 w-3" />
-                  {format(new Date(task.createdAt), 'MMM d, yyyy')}
-                </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleCompletion(task);
+              }}
+              className={cn(
+                "task-checkbox",
+                isSubtask && "subtask-checkbox"
+              )}
+            >
+              {task.completed && (
+                <Check className="h-3 w-3 text-white" />
+              )}
+            </button>
+
+            <div className="task-content">
+              <div className="task-text">
+                {task.name}
               </div>
-            )}
+              {viewMode === 'normal' && (
+                <div className="task-meta">
+                  {!isSubtask && (
+                    <div 
+                      className="task-company-badge"
+                      style={{ 
+                        backgroundColor: `${getCompanyColor(task.companyId)}15`,
+                        color: getCompanyColor(task.companyId),
+                        border: `1px solid ${getCompanyColor(task.companyId)}30`
+                      }}
+                    >
+                      <Building2 className="h-3 w-3 mr-1" />
+                      {getCompanyName(task.companyId)}
+                    </div>
+                  )}
+                  
+                  {/* Display tags */}
+                  {task.tagIds && task.tagIds.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {task.tagIds.map(tagId => {
+                        const tag = tags.find(t => t.id === tagId);
+                        if (!tag) return null;
+                        return (
+                          <div
+                            key={tagId}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium tag-badge"
+                            style={{ 
+                              backgroundColor: `${tag.color}15`,
+                              color: tag.color,
+                              border: `1px solid ${tag.color}30`
+                            }}
+                          >
+                            <Hash className="h-2.5 w-2.5" />
+                            {tag.name}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  
+                  {/* Due date for subtasks or created date for main tasks */}
+                  <div className="task-date">
+                    <Calendar className="h-3 w-3" />
+                    {task.dueDate && isSubtask ? (
+                      <span className={cn(
+                        "text-xs",
+                        new Date(task.dueDate) < new Date() && "due-date-overdue",
+                        format(new Date(task.dueDate), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && "due-date-today"
+                      )}>
+                        Due {format(new Date(task.dueDate), 'MMM d')}
+                      </span>
+                    ) : (
+                      format(new Date(task.createdAt), 'MMM d, yyyy')
+                    )}
+                  </div>
+                </div>
+              )}
+              {viewMode === 'compact' && (
+                <div className="task-meta-compact flex items-center gap-2 text-xs text-muted-foreground">
+                  {!isSubtask && (
+                    <span>{getCompanyName(task.companyId)}</span>
+                  )}
+                  {task.tagIds && task.tagIds.length > 0 && (
+                    <span>• {task.tagIds.length} tag{task.tagIds.length > 1 ? 's' : ''}</span>
+                  )}
+                  {task.dueDate && isSubtask && (
+                    <span className={cn(
+                      new Date(task.dueDate) < new Date() && "text-red-500",
+                      format(new Date(task.dueDate), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && "text-orange-500"
+                    )}>
+                      Due {format(new Date(task.dueDate), 'MMM d')}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className="task-actions">
+          <div className="task-actions flex items-center gap-2 shrink-0">
           {!isSubtask && (
             <TooltipProvider>
               <Tooltip>
@@ -200,13 +263,13 @@ function SortableTask({
                       e.stopPropagation();
                       onAddSubtask(task.id);
                     }}
-                    className="h-8 w-8"
+                    className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Add subtask</p>
+                  <p>Add subtask to this task</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -253,6 +316,7 @@ function SortableTask({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+          </div>
         </div>
       </div>
     </div>
@@ -260,8 +324,9 @@ function SortableTask({
 }
 
 export function TaskList({
-  tasks,
-  companies,
+  tasks = [],
+  companies = [],
+  tags = [],
   onTaskUpdate,
   onTaskDelete,
   onTaskAdd,
@@ -270,9 +335,18 @@ export function TaskList({
   showCompleted,
   setShowCompleted
 }: TaskListProps) {
+  // Defensive check to prevent crashes
+  if (!tasks || !companies || !tags) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">Loading tasks...</p>
+      </div>
+    );
+  }
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskCompany, setNewTaskCompany] = useState('');
   const [newTaskDate, setNewTaskDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [newTaskTags, setNewTaskTags] = useState<string[]>([]);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
@@ -281,6 +355,9 @@ export function TaskList({
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [addingSubtask, setAddingSubtask] = useState<string | null>(null);
   const [newSubtaskName, setNewSubtaskName] = useState('');
+  const [newSubtaskDueDate, setNewSubtaskDueDate] = useState('');
+  const [newSubtaskTags, setNewSubtaskTags] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'normal' | 'compact'>('normal');
   const { toast } = useToast();
 
   const sensors = useSensors(
@@ -291,7 +368,7 @@ export function TaskList({
   );
 
   const filteredAndSortedTasks = useMemo(() => {
-    let filtered = tasks;
+    let filtered = tasks || [];
 
     // Filter by company
     if (selectedCompany !== 'all') {
@@ -320,12 +397,15 @@ export function TaskList({
         name: newTaskName.trim(),
         companyId: newTaskCompany,
         completed: false,
-        subtasks: []
+        subtasks: [],
+        tagIds: newTaskTags,
+        dueDate: new Date(newTaskDate)
       };
       onTaskAdd(newTask);
       setNewTaskName('');
       setNewTaskCompany('');
       setNewTaskDate(format(new Date(), 'yyyy-MM-dd'));
+      setNewTaskTags([]);
       toast({
         title: "Task added",
         description: "Your task has been added successfully.",
@@ -368,11 +448,11 @@ export function TaskList({
   };
 
   const getCompanyName = (companyId: string) => {
-    return companies.find(c => c.id === companyId)?.name || 'Unknown Company';
+    return companies?.find(c => c.id === companyId)?.name || 'Unknown Company';
   };
 
   const getCompanyColor = (companyId: string) => {
-    return companies.find(c => c.id === companyId)?.color || '#64748b';
+    return companies?.find(c => c.id === companyId)?.color || '#64748b';
   };
 
   const toggleTaskCompletion = (task: Task) => {
@@ -600,6 +680,8 @@ export function TaskList({
       expandedTasks={expandedTasks}
       getCompanyName={getCompanyName}
       getCompanyColor={getCompanyColor}
+      tags={tags}
+      viewMode={viewMode}
     />
   );
 
@@ -617,6 +699,18 @@ export function TaskList({
               >
                 <Plus className="h-4 w-4" />
                 {showAddTask ? 'Cancel' : 'Add Task'}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setViewMode(viewMode === 'normal' ? 'compact' : 'normal')}
+                className="flex items-center gap-2"
+                title={`Switch to ${viewMode === 'normal' ? 'compact' : 'normal'} view`}
+              >
+                {viewMode === 'normal' ? (
+                  <>📋 Normal</>
+                ) : (
+                  <>📋 Compact</>
+                )}
               </Button>
               <Button
                 variant="ghost"
@@ -669,36 +763,44 @@ export function TaskList({
                       className="text-base"
                       autoFocus
                     />
-                    <div className="flex gap-3">
-                      <Select value={newTaskCompany} onValueChange={setNewTaskCompany}>
-                        <SelectTrigger className="w-[200px]">
-                          <SelectValue placeholder="Select company" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {companies.map((company) => (
-                            <SelectItem key={company.id} value={company.id}>
-                              {company.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        type="date"
-                        value={newTaskDate}
-                        onChange={(e) => setNewTaskDate(e.target.value)}
-                        className="w-[160px]"
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="flex gap-3">
+                        <Select value={newTaskCompany} onValueChange={setNewTaskCompany}>
+                          <SelectTrigger className="w-[200px]">
+                            <SelectValue placeholder="Select company" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {companies.map((company) => (
+                              <SelectItem key={company.id} value={company.id}>
+                                {company.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="date"
+                          value={newTaskDate}
+                          onChange={(e) => setNewTaskDate(e.target.value)}
+                          className="w-[160px]"
+                        />
+                        <Button 
+                          onClick={() => {
+                            handleAddTask();
+                            setShowAddTask(false);
+                          }}
+                          disabled={!newTaskName.trim() || !newTaskCompany}
+                          className="gap-2"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Task
+                        </Button>
+                      </div>
+                      <TagSelector
+                        tags={tags}
+                        selectedTagIds={newTaskTags}
+                        onTagsChange={setNewTaskTags}
+                        placeholder="Add tags..."
                       />
-                      <Button 
-                        onClick={() => {
-                          handleAddTask();
-                          setShowAddTask(false);
-                        }}
-                        disabled={!newTaskName.trim() || !newTaskCompany}
-                        className="gap-2"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add Task
-                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -729,36 +831,21 @@ export function TaskList({
                               strategy={verticalListSortingStrategy}
                             >
                               {task.subtasks.map(subtask => (
-                                <div key={subtask.id} className="subtask-item">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      toggleSubtaskCompletion(task.id, subtask.id);
-                                    }}
-                                    className="subtask-checkbox"
-                                  >
-                                    {subtask.completed && (
-                                      <Check className="h-2.5 w-2.5 text-white" />
-                                    )}
-                                  </button>
-                                  <span className={cn(
-                                    "subtask-text",
-                                    subtask.completed && "completed"
-                                  )}>
-                                    {subtask.name}
-                                  </span>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteSubtask(task.id, subtask.id);
-                                    }}
-                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </div>
+                                <SortableTask
+                                  key={subtask.id}
+                                  task={subtask}
+                                  isSubtask={true}
+                                  onToggleExpansion={toggleTaskExpansion}
+                                  onToggleCompletion={(subtask) => toggleSubtaskCompletion(task.id, subtask.id)}
+                                  onEdit={setEditingTask}
+                                  onDelete={(subtaskId) => handleDeleteSubtask(task.id, subtaskId)}
+                                  onAddSubtask={() => {}}
+                                  expandedTasks={expandedTasks}
+                                  getCompanyName={getCompanyName}
+                                  getCompanyColor={getCompanyColor}
+                                  tags={tags}
+                                  viewMode={viewMode}
+                                />
                               ))}
                             </SortableContext>
                           </DndContext>
@@ -766,38 +853,65 @@ export function TaskList({
                       </div>
                     )}
                     {!task.parentTaskId && addingSubtask === task.id && (
-                      <div className="ml-8 mt-3 flex items-center gap-2">
-                        <Input
-                          type="text"
-                          value={newSubtaskName}
-                          onChange={(e) => setNewSubtaskName(e.target.value)}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              handleAddSubtask(task.id);
-                            }
-                          }}
-                          placeholder="Add a subtask..."
-                          className="flex-1 h-9"
-                          autoFocus
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleAddSubtask(task.id)}
-                          disabled={!newSubtaskName.trim()}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setAddingSubtask(null);
-                            setNewSubtaskName('');
-                          }}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                      <div className="ml-8 mt-3">
+                        <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
+                          <CardContent className="p-4">
+                            <div className="space-y-3">
+                              <Input
+                                type="text"
+                                value={newSubtaskName}
+                                onChange={(e) => setNewSubtaskName(e.target.value)}
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter' && newSubtaskName.trim()) {
+                                    handleAddSubtask(task.id);
+                                  }
+                                }}
+                                placeholder="Add a subtask..."
+                                className="h-9"
+                                autoFocus
+                              />
+                              <div className="grid grid-cols-1 gap-3">
+                                <div className="flex gap-2">
+                                  <Input
+                                    type="date"
+                                    value={newSubtaskDueDate}
+                                    onChange={(e) => setNewSubtaskDueDate(e.target.value)}
+                                    placeholder="Due date (optional)"
+                                    className="h-9 flex-1"
+                                  />
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={() => handleAddSubtask(task.id)}
+                                    disabled={!newSubtaskName.trim()}
+                                    className="gap-2"
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                    Add
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setAddingSubtask(null);
+                                      setNewSubtaskName('');
+                                      setNewSubtaskDueDate('');
+                                      setNewSubtaskTags([]);
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                                <TagSelector
+                                  tags={tags}
+                                  selectedTagIds={newSubtaskTags}
+                                  onTagsChange={setNewSubtaskTags}
+                                  placeholder="Add tags to subtask..."
+                                />
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
                       </div>
                     )}
                   </div>
@@ -814,7 +928,7 @@ export function TaskList({
                 <p className="empty-state-description">
                   {showCompleted 
                     ? 'Try adjusting your filters or add a new task.' 
-                    : 'All caught up! Add a new task or show completed tasks.'}
+                    : 'Get started by clicking "Add Task" above. Once you have tasks, you can add subtasks using the "+ Subtask" button on each task.'}
                 </p>
               </div>
             )}
@@ -834,28 +948,49 @@ export function TaskList({
               placeholder="Task name"
               className="shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
             />
-            {!editingTask?.parentTaskId && (
-              <select
-                value={editingTask?.companyId || ''}
-                onChange={(e) => setEditingTask(prev => prev ? { ...prev, companyId: e.target.value } : null)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
-              >
-                <option value="">Select company</option>
-                {companies.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            <Input
-              type="date"
-              value={editingTask?.createdAt ? format(new Date(editingTask.createdAt), 'yyyy-MM-dd') : ''}
-              onChange={(e) => setEditingTask(prev => prev ? { 
-                ...prev, 
-                createdAt: new Date(e.target.value)
-              } : null)}
-              className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+            <div className="grid grid-cols-2 gap-3">
+              {!editingTask?.parentTaskId && (
+                <select
+                  value={editingTask?.companyId || ''}
+                  onChange={(e) => setEditingTask(prev => prev ? { ...prev, companyId: e.target.value } : null)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                >
+                  <option value="">Select company</option>
+                  {companies.map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {company.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {editingTask?.parentTaskId ? (
+                <Input
+                  type="date"
+                  value={editingTask?.dueDate ? format(new Date(editingTask.dueDate), 'yyyy-MM-dd') : ''}
+                  onChange={(e) => setEditingTask(prev => prev ? { 
+                    ...prev, 
+                    dueDate: e.target.value ? new Date(e.target.value) : undefined
+                  } : null)}
+                  placeholder="Due date (optional)"
+                  className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                />
+              ) : (
+                <Input
+                  type="date"
+                  value={editingTask?.createdAt ? format(new Date(editingTask.createdAt), 'yyyy-MM-dd') : ''}
+                  onChange={(e) => setEditingTask(prev => prev ? { 
+                    ...prev, 
+                    createdAt: new Date(e.target.value)
+                  } : null)}
+                  className="h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                />
+              )}
+            </div>
+            <TagSelector
+              tags={tags}
+              selectedTagIds={editingTask?.tagIds || []}
+              onTagsChange={(tagIds) => setEditingTask(prev => prev ? { ...prev, tagIds } : null)}
+              placeholder="Add tags..."
             />
             <div className="flex items-center gap-2">
               <input
@@ -877,7 +1012,7 @@ export function TaskList({
             </Button>
             <Button 
               onClick={handleEditTask}
-              className="border-2 border-foreground text-foreground hover:bg-foreground hover:text-background transition-all duration-300 hover:scale-[1.02]"
+              className="bg-blue-600 hover:bg-blue-700 text-white transition-all duration-300 hover:scale-[1.02]"
             >
               Save Changes
             </Button>

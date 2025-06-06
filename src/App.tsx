@@ -2,21 +2,25 @@ import { useState, useEffect, useCallback } from 'react';
 import { Save } from 'lucide-react';
 import type { Task } from './types/task';
 import type { Company } from './types/company';
+import type { Tag } from './types/tag';
 import { TaskList } from './components/tasks/TaskList';
 import { CompanyConfig } from './components/company/CompanyConfig';
+import { TagsPage } from './pages/Tags';
 import { Layout } from './components/layout/Layout';
-import { saveTasks, loadTasks, saveCompanies, loadCompanies } from './lib/storage';
+import { saveTasks, loadTasks, saveCompanies, loadCompanies, saveTags, loadTags } from './lib/storage';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 import { useToast } from "@/components/ui/use-toast"
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
-type Page = 'tasks' | 'companies';
+type Page = 'tasks' | 'companies' | 'tags';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('tasks');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -49,24 +53,42 @@ export default function App() {
       key: '⌘/Ctrl + 2',
       callback: () => setCurrentPage('companies'),
       description: 'Switch to Companies page'
+    },
+    {
+      key: '⌘/Ctrl + 3',
+      callback: () => setCurrentPage('tags'),
+      description: 'Switch to Tags page'
     }
   ];
 
   useKeyboardShortcuts(shortcuts);
 
   useEffect(() => {
-    const loadedTasks = loadTasks();
-    const loadedCompanies = loadCompanies();
-    setTasks(loadedTasks);
-    setCompanies(loadedCompanies);
+    try {
+      const loadedTasks = loadTasks();
+      const loadedCompanies = loadCompanies();
+      const loadedTags = loadTags();
+      setTasks(loadedTasks || []);
+      setCompanies(loadedCompanies || []);
+      setTags(loadedTags || []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      // Set empty arrays as fallback
+      setTasks([]);
+      setCompanies([]);
+      setTags([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   const debouncedSave = useCallback(
-    async (newTasks: Task[], newCompanies: Company[]) => {
+    async (newTasks: Task[], newCompanies: Company[], newTags: Tag[]) => {
       try {
         setIsSaving(true);
         await saveTasks(newTasks);
         await saveCompanies(newCompanies);
+        await saveTags(newTags);
         setLastSaved(new Date());
         setSaveError(null);
       } catch (error) {
@@ -85,11 +107,11 @@ export default function App() {
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      debouncedSave(tasks, companies);
+      debouncedSave(tasks, companies, tags);
     }, 1000); // Debounce for 1 second
 
     return () => clearTimeout(timeoutId);
-  }, [tasks, companies, debouncedSave]);
+  }, [tasks, companies, tags, debouncedSave]);
 
   const handleAddTask = (taskData: Omit<Task, 'id' | 'createdAt'>) => {
     const newTask: Task = {
@@ -155,6 +177,34 @@ export default function App() {
     setCompanies(prev => prev.filter(company => company.id !== companyId));
   };
 
+  const handleAddTag = (tagData: Omit<Tag, 'id' | 'createdAt'>) => {
+    const newTag: Tag = {
+      ...tagData,
+      id: crypto.randomUUID(),
+      createdAt: new Date()
+    };
+    setTags(prev => [...prev, newTag]);
+  };
+
+  const handleUpdateTag = (tagId: string, updates: Partial<Tag>) => {
+    setTags(prev => prev.map(tag => 
+      tag.id === tagId ? { ...tag, ...updates } : tag
+    ));
+  };
+
+  const handleDeleteTag = (tagId: string) => {
+    setTags(prev => prev.filter(tag => tag.id !== tagId));
+    // Remove tag from all tasks and subtasks
+    setTasks(prev => prev.map(task => ({
+      ...task,
+      tagIds: task.tagIds?.filter(id => id !== tagId),
+      subtasks: task.subtasks?.map(subtask => ({
+        ...subtask,
+        tagIds: subtask.tagIds?.filter(id => id !== tagId)
+      }))
+    })));
+  };
+
   const handleSave = useCallback(async () => {
     if (isSaving) return;
     
@@ -167,7 +217,7 @@ export default function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ tasks, companies }),
+        body: JSON.stringify({ tasks, companies, tags }),
       });
       
       if (!response.ok) {
@@ -189,14 +239,26 @@ export default function App() {
     } finally {
       setIsSaving(false);
     }
-  }, [tasks, companies, isSaving, toast]);
+  }, [tasks, companies, tags, isSaving, toast]);
+
+  // Show loading state to prevent white screen
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <ThemeProvider defaultTheme="system" storageKey="task-list-theme">
+    <ThemeProvider defaultTheme="light" storageKey="task-list-theme">
       <Layout 
         currentPage={currentPage} 
         onPageChange={setCurrentPage} 
-        onSave={() => debouncedSave(tasks, companies)}
+        onSave={() => debouncedSave(tasks, companies, tags)}
         saveError={saveError}
         tasks={tasks}
         companies={companies}
@@ -207,6 +269,7 @@ export default function App() {
           <TaskList
             tasks={tasks}
             companies={companies}
+            tags={tags}
             onTaskAdd={handleAddTask}
             onTaskUpdate={handleUpdateTask}
             onTaskDelete={handleDeleteTask}
@@ -215,12 +278,19 @@ export default function App() {
             showCompleted={showCompleted}
             setShowCompleted={setShowCompleted}
           />
-        ) : (
+        ) : currentPage === 'companies' ? (
           <CompanyConfig
             companies={companies}
             onAddCompany={handleAddCompany}
             onUpdateCompany={handleUpdateCompany}
             onDeleteCompany={handleDeleteCompany}
+          />
+        ) : (
+          <TagsPage
+            tags={tags}
+            onAddTag={handleAddTag}
+            onUpdateTag={handleUpdateTag}
+            onDeleteTag={handleDeleteTag}
           />
         )}
       </Layout>

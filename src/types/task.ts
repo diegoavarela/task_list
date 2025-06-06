@@ -7,4 +7,6 @@ export interface Task {
   subtasks?: Task[];
   parentTaskId?: string;
   order?: number;
+  tagIds?: string[];
+  dueDate?: Date;
 } 
