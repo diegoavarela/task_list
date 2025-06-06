@@ -115,7 +115,6 @@ function ExportDropdown({ tasks, companies }: { tasks?: Task[], companies?: Comp
         <Button
           variant="ghost"
           size="icon"
-          className="hover:bg-foreground hover:text-background transition-all duration-300 hover:scale-110"
         >
           <Download className="h-5 w-5" />
         </Button>
@@ -147,10 +146,11 @@ export function Layout({
 }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-20 items-center">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
+      <header className="header">
+        <div className="header-content">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
@@ -159,62 +159,43 @@ export function Layout({
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="h-8 w-8"
+                className="h-7 w-7 text-primary relative"
               >
                 <path d="M9 11l3 3L22 4" />
                 <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
               </svg>
-              <h1 className="text-2xl font-bold">The Freelo List</h1>
             </div>
-            {lastSaved && (
-              <div className="text-xs text-muted-foreground mt-1">
-                Last saved {format(lastSaved, 'HH:mm:ss')}
-              </div>
-            )}
+            <div>
+              <h1 className="header-title">The Freelo List</h1>
+              {lastSaved && (
+                <div className="text-xs text-muted-foreground">
+                  Auto-saved {format(lastSaved, 'HH:mm:ss')}
+                </div>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-4 ml-auto">
-            <nav className="flex items-center gap-6">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => onPageChange('tasks')}
-                      className={`text-sm font-medium flex items-center gap-2 transition-all duration-300 ${
-                        currentPage === 'tasks' 
-                          ? 'border-2 border-foreground text-foreground hover:bg-foreground hover:text-background' 
-                          : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                      } px-4 py-2 rounded-md`}
-                    >
-                      <CheckSquare className="h-4 w-4" />
-                      Tasks
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>View and manage tasks</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => onPageChange('companies')}
-                      className={`text-sm font-medium flex items-center gap-2 transition-all duration-300 ${
-                        currentPage === 'companies' 
-                          ? 'border-2 border-foreground text-foreground hover:bg-foreground hover:text-background' 
-                          : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                      } px-4 py-2 rounded-md`}
-                    >
-                      <Building2 className="h-4 w-4" />
-                      Companies
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Manage companies</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+          <div className="flex items-center gap-4">
+            <nav className="tabs-list">
+              <button
+                onClick={() => onPageChange('tasks')}
+                className={`tabs-trigger ${
+                  currentPage === 'tasks' ? 'data-[state=active]:bg-background' : ''
+                }`}
+                data-state={currentPage === 'tasks' ? 'active' : 'inactive'}
+              >
+                <CheckSquare className="h-4 w-4 mr-2" />
+                Tasks
+              </button>
+              <button
+                onClick={() => onPageChange('companies')}
+                className={`tabs-trigger ${
+                  currentPage === 'companies' ? 'data-[state=active]:bg-background' : ''
+                }`}
+                data-state={currentPage === 'companies' ? 'active' : 'inactive'}
+              >
+                <Building2 className="h-4 w-4 mr-2" />
+                Companies
+              </button>
             </nav>
             <div className="flex items-center gap-2">
               <TooltipProvider>
@@ -224,8 +205,8 @@ export function Layout({
                       <KeyboardShortcuts />
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    <p>View keyboard shortcuts</p>
+                  <TooltipContent side="bottom">
+                    <p>Keyboard shortcuts</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -237,8 +218,8 @@ export function Layout({
                       <ThemeToggle />
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Toggle light/dark mode</p>
+                  <TooltipContent side="bottom">
+                    <p>Toggle theme</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -252,13 +233,17 @@ export function Layout({
                         size="icon"
                         onClick={onSave}
                         disabled={isSaving}
-                        className="hover:bg-foreground hover:text-background transition-all duration-300 hover:scale-110"
+                        className="relative"
                       >
-                        <Save className="h-5 w-5" />
+                        {isSaving ? (
+                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        ) : (
+                          <Save className="h-5 w-5" />
+                        )}
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Save changes</p>
+                    <TooltipContent side="bottom">
+                      <p>Save manually</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -271,8 +256,8 @@ export function Layout({
                       <ExportDropdown tasks={tasks} companies={companies} />
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Export data (JSON/CSV)</p>
+                  <TooltipContent side="bottom">
+                    <p>Export data</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -280,10 +265,24 @@ export function Layout({
           </div>
         </div>
       </header>
-      <main className="container py-8 mt-4">
+      <main className="container py-6 max-w-6xl">
         {saveError && (
-          <div className="mb-4 p-4 rounded-lg bg-destructive/10 text-destructive">
-            <p>{saveError}</p>
+          <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive flex items-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <p className="text-sm font-medium">{saveError}</p>
           </div>
         )}
         {children}

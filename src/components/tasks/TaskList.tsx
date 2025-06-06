@@ -99,9 +99,9 @@ function SortableTask({
     )}>
       <div 
         className={cn(
-          "flex items-center justify-between p-2.5 rounded-lg border bg-card shadow-sm hover:shadow-xl transition-all duration-300 hover:border-gray-400 hover:scale-[1.02] hover:bg-gray-50/80 cursor-pointer group",
-          task.completed && 'animate-complete',
-          isSubtask && 'bg-gray-50/50'
+          "task-item",
+          task.completed && 'completed',
+          isSubtask && 'ml-8 border-l-2 border-border pl-4'
         )}
         onClick={(e) => {
           if (!(e.target as HTMLElement).closest('button')) {
@@ -147,68 +147,63 @@ function SortableTask({
             </TooltipProvider>
           )}
 
-          <div
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleCompletion(task);
+            }}
             className={cn(
-              "flex items-center gap-2 p-1 rounded-lg transition-colors",
-              task.completed && "animate-complete"
+              "task-checkbox",
+              isSubtask && "subtask-checkbox"
             )}
           >
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleCompletion(task);
-              }}
-              className={cn(
-                "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors",
-                task.completed
-                  ? "border-green-500 bg-green-500"
-                  : "border-gray-300 hover:border-gray-400"
-              )}
-            >
-              {task.completed && (
-                <Check className="w-2.5 h-2.5 text-white animate-check" />
-              )}
-            </button>
-          </div>
+            {task.completed && (
+              <Check className="h-3 w-3 text-white" />
+            )}
+          </button>
 
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium transition-all duration-300 ${task.completed ? 'line-through text-gray-500' : ''}`}>
+          <div className="task-content">
+            <div className="task-text">
               {task.name}
-            </span>
+            </div>
             {!isSubtask && (
-              <div 
-                className="flex items-center gap-0.5 px-1 py-[1px] rounded-full text-[9px] font-medium"
-                style={{ 
-                  backgroundColor: `${getCompanyColor(task.companyId)}20`,
-                  color: getCompanyColor(task.companyId),
-                  border: `1px solid ${getCompanyColor(task.companyId)}40`
-                }}
-              >
-                <Building2 className="h-2 w-2" />
-                <span className="leading-none">{getCompanyName(task.companyId)}</span>
+              <div className="task-meta">
+                <div 
+                  className="task-company-badge"
+                  style={{ 
+                    backgroundColor: `${getCompanyColor(task.companyId)}15`,
+                    color: getCompanyColor(task.companyId),
+                    border: `1px solid ${getCompanyColor(task.companyId)}30`
+                  }}
+                >
+                  <Building2 className="h-3 w-3 mr-1" />
+                  {getCompanyName(task.companyId)}
+                </div>
+                <div className="task-date">
+                  <Calendar className="h-3 w-3" />
+                  {format(new Date(task.createdAt), 'MMM d, yyyy')}
+                </div>
               </div>
             )}
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Calendar className="h-2.5 w-2.5" />
-              {format(new Date(task.createdAt), 'MMM d, yyyy')}
-            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="task-actions">
           {!isSubtask && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={(e) => {
                       e.stopPropagation();
                       onAddSubtask(task.id);
                     }}
-                    className="hover:scale-110 transition-all duration-300"
+                    className="h-8 w-8"
                   >
-                    <Plus className="h-3.5 w-3.5 text-gray-500" />
-                  </button>
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Add subtask</p>
@@ -220,15 +215,17 @@ function SortableTask({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={(e) => {
                     e.stopPropagation();
                     onEdit(task);
                   }}
-                  className="hover:scale-110 transition-all duration-300"
+                  className="h-8 w-8"
                 >
-                  <Edit2 className="h-3.5 w-3.5 text-gray-500" />
-                </button>
+                  <Edit2 className="h-4 w-4" />
+                </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Edit task</p>
@@ -239,15 +236,17 @@ function SortableTask({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(task.id);
                   }}
-                  className="hover:scale-110 transition-all duration-300"
+                  className="h-8 w-8 text-destructive hover:text-destructive"
                 >
-                  <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                </button>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Delete task</p>
@@ -605,39 +604,35 @@ export function TaskList({
   );
 
   return (
-    <div className="space-y-8">
-      <Card className="rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01]">
-        <CardHeader className="bg-gradient-to-r from-background to-background/95 rounded-t-lg border-b">
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle>Tasks</CardTitle>
-            <div className="flex items-center gap-4">
+            <CardTitle className="text-2xl font-semibold">Tasks</CardTitle>
+            <div className="flex items-center gap-3">
               <Button
-                variant="outline"
+                variant={showAddTask ? "default" : "outline"}
                 onClick={() => setShowAddTask(!showAddTask)}
-                className={`flex items-center gap-2 h-10 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400 hover:scale-[1.02] ${
-                  showAddTask ? 'bg-foreground text-background hover:bg-foreground/90' : ''
-                }`}
+                className="flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
                 {showAddTask ? 'Cancel' : 'Add Task'}
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => setShowCompleted(!showCompleted)}
-                className="flex items-center gap-2 w-[200px] h-10 justify-between shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400 hover:scale-[1.02]"
+                className="flex items-center gap-2"
                 title={showCompleted ? "Hide completed tasks" : "Show completed tasks"}
               >
-                <div className="flex items-center gap-2">
-                  {showCompleted ? (
-                    <Eye className="h-4 w-4" />
-                  ) : (
-                    <EyeOff className="h-4 w-4" />
-                  )}
-                  {showCompleted ? 'Hide Completed' : 'Show Completed'}
-                </div>
+                {showCompleted ? (
+                  <Eye className="h-4 w-4" />
+                ) : (
+                  <EyeOff className="h-4 w-4" />
+                )}
+                {showCompleted ? 'Hide Completed' : 'Show Completed'}
               </Button>
               <Select value={selectedCompany} onValueChange={setSelectedCompany}>
-                <SelectTrigger className="w-[200px] shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400">
+                <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Filter by company" />
                 </SelectTrigger>
                 <SelectContent>
@@ -650,15 +645,13 @@ export function TaskList({
                 </SelectContent>
               </Select>
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="flex items-center gap-2 w-[200px] h-10 justify-between shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400 hover:scale-[1.02]"
+                className="flex items-center gap-2"
               >
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  {sortOrder === 'asc' ? 'Oldest First' : 'Newest First'}
-                </div>
-                <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${sortOrder === 'desc' ? 'rotate-180' : ''}`} />
+                <Calendar className="h-4 w-4" />
+                {sortOrder === 'asc' ? 'Oldest First' : 'Newest First'}
+                <ChevronDown className={`h-4 w-4 transition-transform ${sortOrder === 'desc' ? 'rotate-180' : ''}`} />
               </Button>
             </div>
           </div>
@@ -666,49 +659,50 @@ export function TaskList({
         <CardContent className="pt-6">
           <div className="space-y-4">
             {showAddTask && (
-              <div className="rounded-lg border bg-card shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400 hover:scale-[1.01] hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
-                <div className="p-4">
-                  <div className="flex flex-col gap-4">
+              <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
+                <CardContent className="p-6">
+                  <div className="space-y-4">
                     <Input
-                      placeholder="Task name"
+                      placeholder="What needs to be done?"
                       value={newTaskName}
                       onChange={(e) => setNewTaskName(e.target.value)}
-                      className="h-12 text-lg shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                      className="text-base"
+                      autoFocus
                     />
-                    <div className="flex gap-4">
-                      <select
-                        value={newTaskCompany}
-                        onChange={(e) => setNewTaskCompany(e.target.value)}
-                        className="flex h-12 w-[300px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
-                      >
-                        <option value="">Select company</option>
-                        {companies.map((company) => (
-                          <option key={company.id} value={company.id}>
-                            {company.name}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="flex gap-3">
+                      <Select value={newTaskCompany} onValueChange={setNewTaskCompany}>
+                        <SelectTrigger className="w-[200px]">
+                          <SelectValue placeholder="Select company" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {companies.map((company) => (
+                            <SelectItem key={company.id} value={company.id}>
+                              {company.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <Input
                         type="date"
                         value={newTaskDate}
                         onChange={(e) => setNewTaskDate(e.target.value)}
-                        className="h-12 w-[200px] shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                        className="w-[160px]"
                       />
                       <Button 
                         onClick={() => {
                           handleAddTask();
                           setShowAddTask(false);
                         }}
-                        className="border-2 border-foreground text-foreground hover:bg-foreground hover:text-background h-12 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
-                        type="button"
+                        disabled={!newTaskName.trim() || !newTaskCompany}
+                        className="gap-2"
                       >
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="h-4 w-4" />
                         Add Task
                       </Button>
                     </div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             )}
             <DndContext
               sensors={sensors}
@@ -724,22 +718,55 @@ export function TaskList({
                     {renderTask(task)}
                     {!task.parentTaskId && expandedTasks.has(task.id) && task.subtasks && task.subtasks.length > 0 && (
                       <div className="ml-8 space-y-2">
-                        <DndContext
-                          sensors={sensors}
-                          collisionDetection={closestCenter}
-                          onDragEnd={(event) => handleSubtaskDragEnd(task.id, event)}
-                        >
-                          <SortableContext
-                            items={task.subtasks.map(subtask => subtask.id)}
-                            strategy={verticalListSortingStrategy}
+                        <div className="subtask-list">
+                          <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={(event) => handleSubtaskDragEnd(task.id, event)}
                           >
-                            {task.subtasks.map(subtask => renderTask(subtask, true))}
-                          </SortableContext>
-                        </DndContext>
+                            <SortableContext
+                              items={task.subtasks.map(subtask => subtask.id)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              {task.subtasks.map(subtask => (
+                                <div key={subtask.id} className="subtask-item">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleSubtaskCompletion(task.id, subtask.id);
+                                    }}
+                                    className="subtask-checkbox"
+                                  >
+                                    {subtask.completed && (
+                                      <Check className="h-2.5 w-2.5 text-white" />
+                                    )}
+                                  </button>
+                                  <span className={cn(
+                                    "subtask-text",
+                                    subtask.completed && "completed"
+                                  )}>
+                                    {subtask.name}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteSubtask(task.id, subtask.id);
+                                    }}
+                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </SortableContext>
+                          </DndContext>
+                        </div>
                       </div>
                     )}
                     {!task.parentTaskId && addingSubtask === task.id && (
-                      <div className="ml-8 mt-4 flex items-center gap-2">
+                      <div className="ml-8 mt-3 flex items-center gap-2">
                         <Input
                           type="text"
                           value={newSubtaskName}
@@ -749,54 +776,48 @@ export function TaskList({
                               handleAddSubtask(task.id);
                             }
                           }}
-                          placeholder="Enter subtask name"
-                          className="flex-1"
+                          placeholder="Add a subtask..."
+                          className="flex-1 h-9"
                           autoFocus
                         />
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleAddSubtask(task.id)}
-                                className="hover:bg-green-50 transition-all duration-300 hover:scale-110"
-                              >
-                                <Plus className="h-4 w-4 text-green-600" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Add subtask</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setAddingSubtask(null);
-                                  setNewSubtaskName('');
-                                }}
-                                className="hover:bg-gray-100 transition-all duration-300 hover:scale-110"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Cancel</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleAddSubtask(task.id)}
+                          disabled={!newSubtaskName.trim()}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setAddingSubtask(null);
+                            setNewSubtaskName('');
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
                     )}
                   </div>
                 ))}
               </SortableContext>
             </DndContext>
+            
+            {filteredAndSortedTasks.length === 0 && (
+              <div className="empty-state">
+                <CheckCircle2 className="empty-state-icon" />
+                <h3 className="empty-state-title">
+                  {showCompleted ? 'No tasks found' : 'No pending tasks'}
+                </h3>
+                <p className="empty-state-description">
+                  {showCompleted 
+                    ? 'Try adjusting your filters or add a new task.' 
+                    : 'All caught up! Add a new task or show completed tasks.'}
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
