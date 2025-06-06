@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical, Check, Hash, FileText, CheckSquare, Search, Filter, Tag as TagIcon, Zap, Repeat, Layers, Folder } from 'lucide-react';
+import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical, Check, Hash, FileText, CheckSquare, Search, Filter, Tag as TagIcon, Zap, Repeat, Layers, Folder, MessageSquare } from 'lucide-react';
 import { PriorityBadge } from './PriorityBadge';
 import { StatusBadge } from './StatusBadge';
-import type { Task } from '../../types/task';
+import type { Task, TaskComment } from '../../types/task';
 import type { Company } from '../../types/company';
 import type { Tag } from '../../types/tag';
 import { TagSelector } from '@/components/tags/TagSelector';
@@ -14,6 +14,8 @@ import { RecurringTasks } from './RecurringTasks';
 import { TaskTemplates } from './TaskTemplates';
 import { CategoryManager } from '../categories/CategoryManager';
 import { CategoryFilter } from '../categories/CategoryFilter';
+import { DataExport } from '../export/DataExport';
+import { TaskComments } from '../comments/TaskComments';
 import { RecurringTaskService } from '@/services/recurringTasks';
 import type { TaskTemplate } from '@/lib/storage';
 import type { Category } from '@/types/category';
@@ -21,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -256,6 +259,21 @@ function SortableTask({
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="max-w-xs text-sm">{task.notes}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                {task.comments && task.comments.length > 0 && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="inline-flex items-center gap-1 ml-2">
+                          <MessageSquare className="h-3 w-3 text-blue-600" />
+                          <span className="text-xs text-blue-600 font-medium">{task.comments.length}</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-sm">{task.comments.length} comment{task.comments.length !== 1 ? 's' : ''}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -516,7 +534,57 @@ export function TaskList({
   const [showTemplates, setShowTemplates] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [showDataExport, setShowDataExport] = useState(false);
+  const [activeTab, setActiveTab] = useState('details');
   const { toast } = useToast();
+
+  // Comment management functions
+  const handleCommentAdd = (taskId: string, comment: Omit<TaskComment, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newComment: TaskComment = {
+      ...comment,
+      id: crypto.randomUUID(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updatedTask = {
+      ...task,
+      comments: [...(task.comments || []), newComment]
+    };
+
+    onTaskUpdate(taskId, updatedTask);
+  };
+
+  const handleCommentUpdate = (taskId: string, commentId: string, updates: Partial<TaskComment>) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task?.comments) return;
+
+    const updatedComments = task.comments.map(comment => 
+      comment.id === commentId 
+        ? { ...comment, ...updates, updatedAt: new Date() }
+        : comment
+    );
+
+    onTaskUpdate(taskId, {
+      ...task,
+      comments: updatedComments
+    });
+  };
+
+  const handleCommentDelete = (taskId: string, commentId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task?.comments) return;
+
+    const updatedComments = task.comments.filter(comment => comment.id !== commentId);
+
+    onTaskUpdate(taskId, {
+      ...task,
+      comments: updatedComments
+    });
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -1023,6 +1091,14 @@ export function TaskList({
                 {categories.length > 0 && (
                   <span className="bg-primary text-primary-foreground rounded-full text-xs px-1.5 py-0.5 min-w-[1.25rem] h-5 flex items-center justify-center">{categories.length}</span>
                 )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowDataExport(true)}
+                className="flex items-center gap-2 touch-action-manipulation"
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Export</span>
               </Button>
               <Button
                 variant={showSmartLists ? "default" : "outline"}
@@ -1550,12 +1626,25 @@ export function TaskList({
         </CardContent>
       </Card>
 
-      <Dialog open={!!editingTask} onOpenChange={() => setEditingTask(null)}>
-        <DialogContent className="w-[95vw] max-w-[425px] sm:w-full">
+      <Dialog open={!!editingTask} onOpenChange={() => { setEditingTask(null); setActiveTab('details'); }}>
+        <DialogContent className="w-[95vw] max-w-[600px] sm:w-full max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Edit {editingTask?.parentTaskId ? 'Subtask' : 'Task'}</DialogTitle>
           </DialogHeader>
-          <div className="py-4 space-y-4 dialog-body">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="comments" className="relative">
+                Comments
+                {editingTask?.comments && editingTask.comments.length > 0 && (
+                  <span className="ml-1 bg-primary text-primary-foreground rounded-full text-xs px-1.5 py-0.5 min-w-[1.25rem] h-5 flex items-center justify-center">
+                    {editingTask.comments.length}
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="details" className="flex-1 overflow-y-auto">
+              <div className="py-4 space-y-4">
             <Input
               value={editingTask?.name || ''}
               onChange={(e) => setEditingTask(prev => prev ? { ...prev, name: e.target.value } : null)}
@@ -1771,7 +1860,24 @@ export function TaskList({
               </div>
             )}
             </>
-          </div>
+              </div>
+            </TabsContent>
+            <TabsContent value="comments" className="flex-1 overflow-y-auto">
+              <div className="py-4">
+                {editingTask && (
+                  <TaskComments
+                    taskId={editingTask.id}
+                    comments={editingTask.comments || []}
+                    onCommentAdd={(comment) => handleCommentAdd(editingTask.id, comment)}
+                    onCommentUpdate={(commentId, updates) => handleCommentUpdate(editingTask.id, commentId, updates)}
+                    onCommentDelete={(commentId) => handleCommentDelete(editingTask.id, commentId)}
+                    currentUserId="current-user" // In a real app, get from auth context
+                    currentUserName="Current User" // In a real app, get from auth context
+                  />
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
           <DialogFooter>
             <Button 
               variant="outline" 
@@ -1838,6 +1944,16 @@ export function TaskList({
           onCategoryUpdate={onCategoryUpdate}
           onCategoryDelete={onCategoryDelete}
           onClose={() => setShowCategoryManager(false)}
+        />
+      )}
+      
+      {showDataExport && (
+        <DataExport
+          tasks={tasks}
+          companies={companies}
+          tags={tags}
+          categories={categories}
+          onClose={() => setShowDataExport(false)}
         />
       )}
     </div>
