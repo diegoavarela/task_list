@@ -11,6 +11,7 @@ import { CalendarPage } from './pages/CalendarPage';
 import { TaskAnalytics } from './components/analytics/TaskAnalytics';
 import { BillingPage } from './components/billing/BillingPage';
 import { Layout } from './components/layout/Layout';
+import { Login } from './pages/Login';
 import { saveTasks, loadTasks, saveCompanies, loadCompanies, saveTags, loadTags, saveTemplates, loadTemplates, saveCategories, loadCategories, type TaskTemplate } from './lib/storage';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -18,6 +19,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { NotificationService } from './services/notificationService';
 import type { Notification } from './types/notification';
+import { MockAuthService } from './lib/mockAuth';
 
 type Page = 'tasks' | 'companies' | 'tags' | 'calendar' | 'analytics' | 'billing';
 
@@ -34,6 +36,11 @@ export default function App() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showAddTask, setShowAddTask] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [groupByCategory, setGroupByCategory] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [tenantId, setTenantId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const shortcuts = [
@@ -43,9 +50,14 @@ export default function App() {
       description: 'Add new task'
     },
     {
-      key: '⌘/Ctrl + S',
-      callback: () => handleSave(),
-      description: 'Save changes'
+      key: '⌘/Ctrl + F',
+      callback: () => setShowFilters(prev => !prev),
+      description: 'Toggle filters'
+    },
+    {
+      key: '⌘/Ctrl + G',
+      callback: () => setGroupByCategory(prev => !prev),
+      description: 'Toggle group by category'
     },
     {
       key: '⌘/Ctrl + H',
@@ -87,6 +99,25 @@ export default function App() {
   useKeyboardShortcuts(shortcuts);
 
   useEffect(() => {
+    // Check for existing auth token in localStorage
+    const storedToken = localStorage.getItem('authToken');
+    const storedTenantId = localStorage.getItem('tenantId');
+    
+    if (storedToken && storedTenantId) {
+      // Validate token is still valid
+      MockAuthService.verifyToken(storedToken)
+        .then(() => {
+          setAuthToken(storedToken);
+          setTenantId(storedTenantId);
+          setIsAuthenticated(true);
+        })
+        .catch(() => {
+          // Token invalid, clear storage
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('tenantId');
+        });
+    }
+    
     try {
       const loadedTasks = loadTasks();
       const loadedCompanies = loadCompanies();
@@ -334,6 +365,28 @@ export default function App() {
     setCategories(prev => prev.filter(category => category.id !== categoryId));
   };
 
+  const handleLogin = (token: string, tenant: string) => {
+    setAuthToken(token);
+    setTenantId(tenant);
+    setIsAuthenticated(true);
+    localStorage.setItem('authToken', token);
+    localStorage.setItem('tenantId', tenant);
+  };
+
+  const handleLogout = () => {
+    setAuthToken(null);
+    setTenantId(null);
+    setIsAuthenticated(false);
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('tenantId');
+    // Clear local data
+    setTasks([]);
+    setCompanies([]);
+    setTags([]);
+    setTemplates([]);
+    setCategories([]);
+  };
+
   const handleSave = useCallback(async () => {
     if (isSaving) return;
     
@@ -345,6 +398,7 @@ export default function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': authToken ? `Bearer ${authToken}` : '',
         },
         body: JSON.stringify({ tasks, companies, tags }),
       });
@@ -368,7 +422,7 @@ export default function App() {
     } finally {
       setIsSaving(false);
     }
-  }, [tasks, companies, tags, isSaving, toast]);
+  }, [tasks, companies, tags, isSaving, toast, authToken]);
 
   // Show loading state to prevent white screen
   if (isLoading) {
@@ -379,6 +433,15 @@ export default function App() {
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <ThemeProvider defaultTheme="light" storageKey="task-list-theme">
+        <Login onLogin={handleLogin} />
+        <Toaster />
+      </ThemeProvider>
     );
   }
 
@@ -393,6 +456,7 @@ export default function App() {
         companies={companies}
         isSaving={isSaving}
         lastSaved={lastSaved}
+        onLogout={handleLogout}
       >
         {currentPage === 'tasks' ? (
           <TaskList
@@ -406,6 +470,10 @@ export default function App() {
             setShowAddTask={setShowAddTask}
             showCompleted={showCompleted}
             setShowCompleted={setShowCompleted}
+            showFilters={showFilters}
+            setShowFilters={setShowFilters}
+            groupByCategory={groupByCategory}
+            setGroupByCategory={setGroupByCategory}
             templates={templates}
             onTemplateCreate={handleAddTemplate}
             onTemplateUpdate={handleUpdateTemplate}

@@ -1,4 +1,4 @@
-import { Save, CheckSquare, Building2, Download, FileJson, FileSpreadsheet, Hash, Menu, X, Calendar, BarChart, CreditCard } from 'lucide-react';
+import { Save, CheckSquare, Building2, Download, FileJson, FileSpreadsheet, Hash, Menu, X, Calendar, BarChart, CreditCard, LogOut } from 'lucide-react';
 import { Footer } from './Footer';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,7 @@ interface LayoutProps {
   companies?: Company[];
   isSaving?: boolean;
   lastSaved?: Date | null;
+  onLogout?: () => void;
 }
 
 function ExportDropdown({ tasks, companies }: { tasks?: Task[], companies?: Company[] }) {
@@ -153,7 +154,8 @@ export function Layout({
   tasks, 
   companies,
   isSaving,
-  lastSaved 
+  lastSaved,
+  onLogout 
 }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
@@ -307,62 +309,30 @@ export function Layout({
                 </Tooltip>
               </TooltipProvider>
 
-              {onSave && (
+              {onLogout && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={onSave}
-                        disabled={isSaving}
-                        className="relative"
+                        onClick={onLogout}
+                        className="hover:bg-foreground hover:text-background transition-all duration-300 hover:scale-110"
                       >
-                        {isSaving ? (
-                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                        ) : (
-                          <Save className="h-5 w-5" />
-                        )}
+                        <LogOut className="h-5 w-5" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom">
-                      <p>Save manually</p>
+                      <p>Logout</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               )}
 
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <ExportDropdown tasks={tasks} companies={companies} />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>Export data</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
             </div>
 
             {/* Mobile Menu Button */}
             <div className="flex md:hidden items-center gap-2">
-              {onSave && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onSave}
-                  disabled={isSaving}
-                  className="relative h-8 w-8"
-                >
-                  {isSaving ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                </Button>
-              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -467,7 +437,16 @@ export function Layout({
                 <div className="flex items-center gap-2">
                   <KeyboardShortcuts />
                   <ThemeToggle />
-                  <ExportDropdown tasks={tasks} companies={companies} />
+                  {onLogout && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={onLogout}
+                      className="h-8 w-8"
+                    >
+                      <LogOut className="h-5 w-5" />
+                    </Button>
+                  )}
                 </div>
                 {lastSaved && (
                   <div className="text-xs text-slate-500">

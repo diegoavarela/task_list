@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical, Check, Hash, FileText, CheckSquare, Search, Filter, Tag as TagIcon, Zap, Repeat, Layers, Folder, MessageSquare, Share2, UserPlus, CalendarPlus, Info } from 'lucide-react';
 import { PriorityBadge } from './PriorityBadge';
 import { StatusBadge } from './StatusBadge';
@@ -82,6 +82,10 @@ interface TaskListProps {
   setShowAddTask: (show: boolean) => void;
   showCompleted: boolean;
   setShowCompleted: (show: boolean) => void;
+  showFilters?: boolean;
+  setShowFilters?: (show: boolean) => void;
+  groupByCategory?: boolean;
+  setGroupByCategory?: (group: boolean) => void;
   templates: TaskTemplate[];
   onTemplateCreate: (template: Omit<TaskTemplate, 'id' | 'createdAt' | 'useCount' | 'lastUsed'>) => void;
   onTemplateUpdate: (templateId: string, updates: Partial<TaskTemplate>) => void;
@@ -217,13 +221,22 @@ function SortableTask({
                 className="rounded border-gray-300 text-primary focus:ring-primary"
               />
             )}
-            <button
-              {...attributes}
-              {...listeners}
-              className="hover:scale-110 transition-all duration-300 cursor-grab active:cursor-grabbing hidden sm:block"
-            >
-              <GripVertical className="h-3.5 w-3.5 text-gray-400" />
-            </button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    {...attributes}
+                    {...listeners}
+                    className="hover:scale-110 transition-all duration-300 cursor-grab active:cursor-grabbing hidden sm:block"
+                  >
+                    <GripVertical className="h-3.5 w-3.5 text-gray-400" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Drag to reorder</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
             {!isSubtask && task.subtasks && task.subtasks.length > 0 && (
               <TooltipProvider>
@@ -250,20 +263,29 @@ function SortableTask({
               </TooltipProvider>
             )}
 
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleCompletion(task);
-              }}
-              className={cn(
-                "task-checkbox touch-action-manipulation",
-                isSubtask && "subtask-checkbox"
-              )}
-            >
-              {task.completed && (
-                <Check className="h-3 w-3 text-white" />
-              )}
-            </button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleCompletion(task);
+                    }}
+                    className={cn(
+                      "task-checkbox touch-action-manipulation",
+                      isSubtask && "subtask-checkbox"
+                    )}
+                  >
+                    {task.completed && (
+                      <Check className="h-3 w-3 text-white" />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{task.completed ? 'Mark as incomplete' : 'Mark as complete'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
             <div className="task-content">
               <div className="task-text">
@@ -552,6 +574,10 @@ export function TaskList({
   setShowAddTask,
   showCompleted,
   setShowCompleted,
+  showFilters: showFiltersFromProps,
+  setShowFilters: setShowFiltersFromProps,
+  groupByCategory: groupByCategoryFromProps,
+  setGroupByCategory: setGroupByCategoryFromProps,
   templates = [],
   onTemplateCreate,
   onTemplateUpdate,
@@ -599,7 +625,7 @@ export function TaskList({
   const [selectedCompany, setSelectedCompany] = useState<string>('all');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(showFiltersFromProps ?? false);
   const [smartListFilter, setSmartListFilter] = useState<((task: Task) => boolean) | null>(null);
   const [activeSmartList, setActiveSmartList] = useState<string | null>(null);
   const [showSmartLists, setShowSmartLists] = useState(false);
@@ -623,8 +649,21 @@ export function TaskList({
   const [activeTab, setActiveTab] = useState('details');
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [sharingTask, setSharingTask] = useState<Task | null>(null);
-  const [groupByCategory, setGroupByCategory] = useState(false);
+  const [groupByCategory, setGroupByCategory] = useState(groupByCategoryFromProps ?? false);
   const { toast } = useToast();
+
+  // Sync with props when they change
+  React.useEffect(() => {
+    if (showFiltersFromProps !== undefined) {
+      setShowFilters(showFiltersFromProps);
+    }
+  }, [showFiltersFromProps]);
+
+  React.useEffect(() => {
+    if (groupByCategoryFromProps !== undefined) {
+      setGroupByCategory(groupByCategoryFromProps);
+    }
+  }, [groupByCategoryFromProps]);
 
   // Comment management functions
   const handleCommentAdd = (taskId: string, comment: Omit<TaskComment, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -1222,63 +1261,96 @@ export function TaskList({
                 <span className="hidden sm:inline">{showAddTask ? 'Cancel' : 'Add Task'}</span>
               </Button>
               
-              <Button
-                variant={showFilters ? "default" : "outline"}
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 touch-action-manipulation"
-              >
-                <Filter className="h-4 w-4" />
-                <span className="hidden sm:inline">Filters</span>
-                {(searchQuery || selectedCompany !== 'all' || selectedTags.length > 0 || selectedCategoryId) && (
-                  <Badge variant="secondary" className="ml-1 h-5 w-5 rounded-full p-0">
-                    {((searchQuery ? 1 : 0) + 
-                      (selectedCompany !== 'all' ? 1 : 0) + 
-                      (selectedTags.length > 0 ? 1 : 0) + 
-                      (selectedCategoryId ? 1 : 0))}
-                  </Badge>
-                )}
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={showFilters ? "default" : "outline"}
+                      onClick={() => setShowFilters(!showFilters)}
+                      className="flex items-center gap-2 touch-action-manipulation"
+                    >
+                      <Filter className="h-4 w-4" />
+                      <span className="hidden sm:inline">Filters</span>
+                      {(searchQuery || selectedCompany !== 'all' || selectedTags.length > 0 || selectedCategoryId) && (
+                        <Badge variant="secondary" className="ml-1 h-5 w-5 rounded-full p-0">
+                          {((searchQuery ? 1 : 0) + 
+                            (selectedCompany !== 'all' ? 1 : 0) + 
+                            (selectedTags.length > 0 ? 1 : 0) + 
+                            (selectedCategoryId ? 1 : 0))}
+                        </Badge>
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{showFilters ? 'Hide filters' : 'Show filters'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
               {/* View Options */}
               <div className="flex items-center gap-1">
-                <Button
-                  variant={groupByCategory ? "default" : "ghost"}
-                  onClick={() => setGroupByCategory(!groupByCategory)}
-                  size="icon"
-                  title="Group by category"
-                  className="h-9 w-9"
-                >
-                  <Layers className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setViewMode(viewMode === 'normal' ? 'compact' : 'normal')}
-                  size="icon"
-                  title={`Switch to ${viewMode === 'normal' ? 'compact' : 'normal'} view`}
-                  className="h-9 w-9"
-                >
-                  {viewMode === 'normal' ? (
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <rect x="4" y="4" width="16" height="4" strokeWidth="2" />
-                      <rect x="4" y="12" width="16" height="4" strokeWidth="2" />
-                      <rect x="4" y="20" width="16" height="4" strokeWidth="2" />
-                    </svg>
-                  ) : (
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <rect x="4" y="4" width="16" height="6" strokeWidth="2" />
-                      <rect x="4" y="14" width="16" height="6" strokeWidth="2" />
-                    </svg>
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowCompleted(!showCompleted)}
-                  size="icon"
-                  title={showCompleted ? "Hide completed" : "Show completed"}
-                  className="h-9 w-9"
-                >
-                  {showCompleted ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={groupByCategory ? "default" : "ghost"}
+                        onClick={() => setGroupByCategory(!groupByCategory)}
+                        size="icon"
+                        className="h-9 w-9"
+                      >
+                        <Layers className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Group by category</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        onClick={() => setViewMode(viewMode === 'normal' ? 'compact' : 'normal')}
+                        size="icon"
+                        className="h-9 w-9"
+                      >
+                        {viewMode === 'normal' ? (
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <rect x="4" y="4" width="16" height="4" strokeWidth="2" />
+                            <rect x="4" y="12" width="16" height="4" strokeWidth="2" />
+                            <rect x="4" y="20" width="16" height="4" strokeWidth="2" />
+                          </svg>
+                        ) : (
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <rect x="4" y="4" width="16" height="6" strokeWidth="2" />
+                            <rect x="4" y="14" width="16" height="6" strokeWidth="2" />
+                          </svg>
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Switch to {viewMode === 'normal' ? 'compact' : 'normal'} view</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        onClick={() => setShowCompleted(!showCompleted)}
+                        size="icon"
+                        className="h-9 w-9"
+                      >
+                        {showCompleted ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{showCompleted ? "Hide completed" : "Show completed"}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
 
               {/* Sort Options */}
@@ -1308,13 +1380,22 @@ export function TaskList({
               {/* More Options Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <circle cx="12" cy="12" r="1" strokeWidth="2" />
-                      <circle cx="12" cy="5" r="1" strokeWidth="2" />
-                      <circle cx="12" cy="19" r="1" strokeWidth="2" />
-                    </svg>
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-9 w-9">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="1" strokeWidth="2" />
+                            <circle cx="12" cy="5" r="1" strokeWidth="2" />
+                            <circle cx="12" cy="19" r="1" strokeWidth="2" />
+                          </svg>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>More options</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem onClick={() => setShowTemplates(true)} className="gap-2">
@@ -1491,67 +1572,75 @@ export function TaskList({
         <CardContent className="pt-6">
           <div className="space-y-4">
             {/* Always show quick stats summary */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-4 gap-2">
               <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800">
-                <CardContent className="p-4">
+                <CardContent className="p-2">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Active</p>
-                      <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                        {tasks.filter(t => !t.completed && !t.isArchived).length}
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <Circle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <div>
+                        <p className="text-xs text-blue-600 dark:text-blue-400">Active</p>
+                        <p className="text-lg font-bold text-blue-900 dark:text-blue-100">
+                          {tasks.filter(t => !t.completed && !t.isArchived).length}
+                        </p>
+                      </div>
                     </div>
-                    <Circle className="h-8 w-8 text-blue-600 dark:text-blue-400 opacity-50" />
                   </div>
                 </CardContent>
               </Card>
               
               <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800">
-                <CardContent className="p-4">
+                <CardContent className="p-2">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-green-600 dark:text-green-400">Completed</p>
-                      <p className="text-2xl font-bold text-green-900 dark:text-green-100">
-                        {tasks.filter(t => t.completed).length}
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      <div>
+                        <p className="text-xs text-green-600 dark:text-green-400">Completed</p>
+                        <p className="text-lg font-bold text-green-900 dark:text-green-100">
+                          {tasks.filter(t => t.completed).length}
+                        </p>
+                      </div>
                     </div>
-                    <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400 opacity-50" />
                   </div>
                 </CardContent>
               </Card>
               
               <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800">
-                <CardContent className="p-4">
+                <CardContent className="p-2">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-red-600 dark:text-red-400">Overdue</p>
-                      <p className="text-2xl font-bold text-red-900 dark:text-red-100">
-                        {tasks.filter(t => {
-                          if (!t.dueDate || t.completed) return false;
-                          const dueDate = typeof t.dueDate === 'string' ? new Date(t.dueDate) : t.dueDate;
-                          return isPast(startOfDay(dueDate)) && !isToday(dueDate);
-                        }).length}
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      <div>
+                        <p className="text-xs text-red-600 dark:text-red-400">Overdue</p>
+                        <p className="text-lg font-bold text-red-900 dark:text-red-100">
+                          {tasks.filter(t => {
+                            if (!t.dueDate || t.completed) return false;
+                            const dueDate = typeof t.dueDate === 'string' ? new Date(t.dueDate) : t.dueDate;
+                            return isPast(startOfDay(dueDate)) && !isToday(dueDate);
+                          }).length}
+                        </p>
+                      </div>
                     </div>
-                    <Calendar className="h-8 w-8 text-red-600 dark:text-red-400 opacity-50" />
                   </div>
                 </CardContent>
               </Card>
               
               <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800">
-                <CardContent className="p-4">
+                <CardContent className="p-2">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-amber-600 dark:text-amber-400">Due Today</p>
-                      <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">
-                        {tasks.filter(t => {
-                          if (!t.dueDate || t.completed) return false;
-                          const dueDate = typeof t.dueDate === 'string' ? new Date(t.dueDate) : t.dueDate;
-                          return isToday(dueDate);
-                        }).length}
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                      <div>
+                        <p className="text-xs text-amber-600 dark:text-amber-400">Due Today</p>
+                        <p className="text-lg font-bold text-amber-900 dark:text-amber-100">
+                          {tasks.filter(t => {
+                            if (!t.dueDate || t.completed) return false;
+                            const dueDate = typeof t.dueDate === 'string' ? new Date(t.dueDate) : t.dueDate;
+                            return isToday(dueDate);
+                          }).length}
+                        </p>
+                      </div>
                     </div>
-                    <Calendar className="h-8 w-8 text-amber-600 dark:text-amber-400 opacity-50" />
                   </div>
                 </CardContent>
               </Card>
@@ -1864,13 +1953,22 @@ export function TaskList({
                         }}
                         className="flex items-center gap-2 mb-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg p-2 -ml-2 transition-colors"
                       >
-                        <button className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
-                          {isCollapsed ? (
-                            <ChevronRight className="h-4 w-4 text-gray-500" />
-                          ) : (
-                            <ChevronDownIcon className="h-4 w-4 text-gray-500" />
-                          )}
-                        </button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
+                                {isCollapsed ? (
+                                  <ChevronRight className="h-4 w-4 text-gray-500" />
+                                ) : (
+                                  <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+                                )}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{isCollapsed ? 'Expand category' : 'Collapse category'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <div 
                           className="w-3 h-3 rounded-sm flex-shrink-0" 
                           style={{ backgroundColor: category.color }}
@@ -2203,7 +2301,7 @@ export function TaskList({
                   Share
                 </TabsTrigger>
               </TabsList>
-              <TabsContent value="details" className="flex-1 overflow-y-auto mt-4">
+              <TabsContent value="details" className="flex-1 overflow-y-auto mt-4 max-h-[60vh]">
                 <div className="space-y-4 pr-2">
             <Input
               value={editingTask?.name || ''}
@@ -2422,7 +2520,7 @@ export function TaskList({
             </>
               </div>
             </TabsContent>
-              <TabsContent value="comments" className="flex-1 overflow-y-auto mt-4">
+              <TabsContent value="comments" className="flex-1 overflow-y-auto mt-4 max-h-[60vh]">
                 <div className="pr-2">
                   {editingTask && (
                     <TaskComments
@@ -2437,7 +2535,7 @@ export function TaskList({
                   )}
                 </div>
               </TabsContent>
-              <TabsContent value="assignment" className="flex-1 overflow-y-auto mt-4">
+              <TabsContent value="assignment" className="flex-1 overflow-y-auto mt-4 max-h-[60vh]">
                 <div className="pr-2">
                   {editingTask && (
                     <TaskAssignment
@@ -2448,7 +2546,7 @@ export function TaskList({
                   )}
                 </div>
               </TabsContent>
-              <TabsContent value="sharing" className="flex-1 overflow-y-auto mt-4">
+              <TabsContent value="sharing" className="flex-1 overflow-y-auto mt-4 max-h-[60vh]">
                 <div className="pr-2">
                   {editingTask && (
                     <div className="space-y-4">

@@ -54,17 +54,23 @@ export function Footer() {
           <div className="flex-1 space-y-4">
             <h4 className="text-sm font-semibold">Quick Links</h4>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <a href="#tasks" className="text-muted-foreground hover:text-primary transition-colors">
+              <a href="#" className="text-muted-foreground hover:text-primary transition-colors" onClick={(e) => { e.preventDefault(); document.querySelector('[data-page="tasks"]')?.click(); }}>
                 Tasks
               </a>
-              <a href="#companies" className="text-muted-foreground hover:text-primary transition-colors">
+              <a href="#" className="text-muted-foreground hover:text-primary transition-colors" onClick={(e) => { e.preventDefault(); document.querySelector('[data-page="companies"]')?.click(); }}>
                 Companies
               </a>
-              <a href="#tags" className="text-muted-foreground hover:text-primary transition-colors">
+              <a href="#" className="text-muted-foreground hover:text-primary transition-colors" onClick={(e) => { e.preventDefault(); document.querySelector('[data-page="tags"]')?.click(); }}>
                 Tags
               </a>
-              <a href="#export" className="text-muted-foreground hover:text-primary transition-colors">
-                Export Data
+              <a href="#" className="text-muted-foreground hover:text-primary transition-colors" onClick={(e) => { e.preventDefault(); document.querySelector('[data-page="calendar"]')?.click(); }}>
+                Calendar
+              </a>
+              <a href="#" className="text-muted-foreground hover:text-primary transition-colors" onClick={(e) => { e.preventDefault(); document.querySelector('[data-page="analytics"]')?.click(); }}>
+                Analytics
+              </a>
+              <a href="#" className="text-muted-foreground hover:text-primary transition-colors" onClick={(e) => { e.preventDefault(); document.querySelector('[data-page="billing"]')?.click(); }}>
+                Billing
               </a>
             </div>
           </div>
@@ -73,20 +79,27 @@ export function Footer() {
           <div className="flex-1 space-y-4">
             <h4 className="text-sm font-semibold">Connect</h4>
             <div className="flex gap-2">
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Github className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Mail className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Globe className="h-4 w-4" />
-              </Button>
+              <a href="https://github.com/diegoavarela" target="_blank" rel="noopener noreferrer">
+                <Button variant="ghost" size="icon" className="h-8 w-8" title="GitHub">
+                  <Github className="h-4 w-4" />
+                </Button>
+              </a>
+              <a href="mailto:d@diegoavarela">
+                <Button variant="ghost" size="icon" className="h-8 w-8" title="Email">
+                  <Mail className="h-4 w-4" />
+                </Button>
+              </a>
+              <a href="https://www.diegoavarela.com" target="_blank" rel="noopener noreferrer">
+                <Button variant="ghost" size="icon" className="h-8 w-8" title="Website">
+                  <Globe className="h-4 w-4" />
+                </Button>
+              </a>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Have suggestions or feedback?<br />
-              We'd love to hear from you!
-            </p>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>GitHub: <a href="https://github.com/diegoavarela" className="hover:text-primary transition-colors">diegoavarela</a></p>
+              <p>Email: <a href="mailto:d@diegoavarela" className="hover:text-primary transition-colors">d@diegoavarela</a></p>
+              <p>Web: <a href="https://www.diegoavarela.com" className="hover:text-primary transition-colors">diegoavarela.com</a></p>
+            </div>
           </div>
         </div>
 

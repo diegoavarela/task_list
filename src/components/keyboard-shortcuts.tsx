@@ -15,12 +15,16 @@ interface Shortcut {
 
 const shortcuts: Shortcut[] = [
   { key: '⌘/Ctrl + N', description: 'Add new task' },
-  { key: '⌘/Ctrl + S', description: 'Save changes' },
+  { key: '⌘/Ctrl + F', description: 'Toggle filters' },
+  { key: '⌘/Ctrl + G', description: 'Toggle group by category' },
   { key: '⌘/Ctrl + H', description: 'Toggle completed tasks' },
-  { key: '⌘/Ctrl + 1', description: 'Switch to Tasks page' },
-  { key: '⌘/Ctrl + 2', description: 'Switch to Companies page' },
-  { key: 'Enter', description: 'Add subtask' },
-  { key: 'Escape', description: 'Cancel adding subtask' },
+  { key: '⌘/Ctrl + 1', description: 'Switch to Tasks' },
+  { key: '⌘/Ctrl + 2', description: 'Switch to Companies' },
+  { key: '⌘/Ctrl + 3', description: 'Switch to Tags' },
+  { key: '⌘/Ctrl + 4', description: 'Switch to Calendar' },
+  { key: '⌘/Ctrl + 5', description: 'Switch to Analytics' },
+  { key: '⌘/Ctrl + 6', description: 'Switch to Billing' },
+  { key: 'Escape', description: 'Close dialogs/Cancel actions' },
 ];
 
 export function KeyboardShortcuts() {
