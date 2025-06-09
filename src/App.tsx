@@ -7,16 +7,19 @@ import type { Category } from './types/category';
 import { TaskList } from './components/tasks/TaskList';
 import { CompanyConfig } from './components/company/CompanyConfig';
 import { TagsPage } from './pages/Tags';
-import { TaskCalendar } from './components/calendar/TaskCalendar';
+import { CalendarPage } from './pages/CalendarPage';
 import { TaskAnalytics } from './components/analytics/TaskAnalytics';
+import { BillingPage } from './components/billing/BillingPage';
 import { Layout } from './components/layout/Layout';
 import { saveTasks, loadTasks, saveCompanies, loadCompanies, saveTags, loadTags, saveTemplates, loadTemplates, saveCategories, loadCategories, type TaskTemplate } from './lib/storage';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 import { useToast } from "@/components/ui/use-toast"
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { NotificationService } from './services/notificationService';
+import type { Notification } from './types/notification';
 
-type Page = 'tasks' | 'companies' | 'tags' | 'calendar' | 'analytics';
+type Page = 'tasks' | 'companies' | 'tags' | 'calendar' | 'analytics' | 'billing';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('tasks');
@@ -73,6 +76,11 @@ export default function App() {
       key: '⌘/Ctrl + 5',
       callback: () => setCurrentPage('analytics'),
       description: 'Switch to Analytics page'
+    },
+    {
+      key: '⌘/Ctrl + 6',
+      callback: () => setCurrentPage('billing'),
+      description: 'Switch to Billing page'
     }
   ];
 
@@ -102,6 +110,32 @@ export default function App() {
       setIsLoading(false);
     }
   }, []);
+
+  // Initialize notification service
+  useEffect(() => {
+    // Request notification permission on first load
+    NotificationService.requestPermission();
+    
+    // Start monitoring for notifications
+    NotificationService.startMonitoring(tasks);
+    
+    // Clear old notifications
+    NotificationService.clearOldNotifications();
+    
+    // Subscribe to notifications
+    const unsubscribe = NotificationService.onNotification((notification: Notification) => {
+      // Show toast for new notifications
+      toast({
+        title: notification.title,
+        description: notification.message,
+      });
+    });
+    
+    return () => {
+      NotificationService.stopMonitoring();
+      unsubscribe();
+    };
+  }, [tasks, toast]);
 
   const debouncedSave = useCallback(
     async (newTasks: Task[], newCompanies: Company[], newTags: Tag[], newTemplates?: TaskTemplate[], newCategories?: Category[]) => {
@@ -397,22 +431,18 @@ export default function App() {
             onDeleteTag={handleDeleteTag}
           />
         ) : currentPage === 'calendar' ? (
-          <TaskCalendar
+          <CalendarPage
             tasks={tasks}
-            onSelectTask={(task) => {
+            onTaskEdit={(task) => {
               // Navigate to tasks and edit the selected task
               setCurrentPage('tasks');
               // You could add logic here to open the edit dialog for the selected task
             }}
-            onSelectSlot={(slotInfo) => {
-              // Navigate to tasks and add a new task with the selected date
-              setCurrentPage('tasks');
-              setShowAddTask(true);
-              // You could pre-fill the date here
-            }}
           />
         ) : currentPage === 'analytics' ? (
           <TaskAnalytics tasks={tasks} />
+        ) : currentPage === 'billing' ? (
+          <BillingPage />
         ) : (
           <TagsPage
             tags={tags}

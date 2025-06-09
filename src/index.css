@@ -4,49 +4,49 @@
 
 @layer base {
   :root {
-    /* Professional Team Management Design System */
+    /* Professional Team Management Design System - Enhanced */
     --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 234 89% 62%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 220 14% 96%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 234 89% 62%;
+    --radius: 0.75rem;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 240 10% 3.9%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 217 91% 60%;
+    --background: 224 47% 9%;
+    --foreground: 210 40% 98%;
+    --card: 224 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 224 47% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 234 89% 68%;
+    --primary-foreground: 224 47% 9%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 234 89% 68%;
   }
 }
 
@@ -59,17 +59,35 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(234, 89%, 62%, 0.03) 0px, transparent 50%),
+      radial-gradient(at 50% 50%, hsla(220, 14%, 96%, 0.05) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(234, 89%, 62%, 0.03) 0px, transparent 50%);
+  }
+  
+  .dark body {
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(234, 89%, 68%, 0.05) 0px, transparent 50%),
+      radial-gradient(at 50% 50%, hsla(217, 33%, 17%, 0.1) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(234, 89%, 68%, 0.05) 0px, transparent 50%);
   }
 }
 
 @layer components {
   /* Modern Card Styles */
   .card {
-    @apply bg-card text-card-foreground rounded-xl border border-border/50 shadow-sm transition-all duration-200;
+    @apply bg-card text-card-foreground rounded-xl border border-border/40 shadow-sm transition-all duration-200;
+    background: linear-gradient(135deg, hsl(var(--card)), hsl(var(--card) / 0.95));
   }
 
   .card:hover {
-    @apply shadow-md border-border;
+    @apply shadow-lg border-border/60;
+    transform: translateY(-2px);
+  }
+  
+  .dark .card {
+    @apply shadow-xl;
+    background: linear-gradient(135deg, hsl(var(--card)), hsl(var(--card) / 0.8));
   }
 
   /* Professional Button Styles */
@@ -100,11 +118,31 @@
 
   /* Task List Improvements */
   .task-item {
-    @apply flex items-start gap-2 sm:gap-3 p-3 sm:p-4 bg-card rounded-lg border border-border/50 transition-all duration-200 hover:border-primary/20 hover:shadow-sm;
+    @apply flex items-start gap-2 sm:gap-3 p-3 sm:p-4 bg-card rounded-xl border border-border/40 transition-all duration-200 hover:border-primary/30 hover:shadow-md relative overflow-hidden;
+    background: linear-gradient(to right, transparent, hsl(var(--card)));
+  }
+  
+  .task-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: transparent;
+    transition: background-color 0.2s ease;
+  }
+  
+  .task-item:hover::before {
+    background: hsl(var(--primary));
   }
   
   .task-item.is-subtask {
-    @apply ml-0 mt-2 bg-gray-50/70 border-gray-200/70 p-3;
+    @apply ml-0 mt-2 bg-muted/30 border-muted-foreground/20 p-3 rounded-lg;
+  }
+  
+  .dark .task-item {
+    background: linear-gradient(to right, hsl(var(--card) / 0.5), hsl(var(--card)));
   }
   
   .task-item.compact-view {

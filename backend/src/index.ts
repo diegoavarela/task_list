@@ -17,6 +17,7 @@ import authRoutes from './routes/auth';
 import taskRoutes from './routes/tasks';
 import tenantRoutes from './routes/tenants';
 import userRoutes from './routes/users';
+import subscriptionRoutes from './routes/subscriptions';
 
 const app = express();
 const server = createServer(app);
@@ -59,6 +60,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/tenants', tenantRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
 
 // Socket.IO for real-time features
 io.on('connection', (socket) => {
@@ -104,4 +106,4 @@ server.listen(PORT, () => {
   console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
 });
 
-export { io };
+export { app, io };

@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical, Check, Hash, FileText, CheckSquare, Search, Filter, Tag as TagIcon, Zap, Repeat, Layers, Folder, MessageSquare } from 'lucide-react';
+import { Plus, Trash2, Edit2, Building2, Calendar, CheckCircle2, Circle, ChevronDown, Download, Eye, EyeOff, ChevronRight, ChevronDown as ChevronDownIcon, X, GripVertical, Check, Hash, FileText, CheckSquare, Search, Filter, Tag as TagIcon, Zap, Repeat, Layers, Folder, MessageSquare, Share2, UserPlus, CalendarPlus, Info } from 'lucide-react';
 import { PriorityBadge } from './PriorityBadge';
 import { StatusBadge } from './StatusBadge';
+import { Badge } from '@/components/ui/badge';
 import type { Task, TaskComment } from '../../types/task';
 import type { Company } from '../../types/company';
 import type { Tag } from '../../types/tag';
@@ -16,6 +17,9 @@ import { CategoryManager } from '../categories/CategoryManager';
 import { CategoryFilter } from '../categories/CategoryFilter';
 import { DataExport } from '../export/DataExport';
 import { TaskComments } from '../comments/TaskComments';
+import { TaskAssignment } from '../collaboration/TaskAssignment';
+import { ShareDialog } from '../collaboration/ShareDialog';
+import { CalendarService } from '@/services/calendarService';
 import { RecurringTaskService } from '@/services/recurringTasks';
 import type { TaskTemplate } from '@/lib/storage';
 import type { Category } from '@/types/category';
@@ -25,6 +29,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from '@/components/ui/use-toast';
 import { EmptyState } from '@/components/ui/empty-state';
 import { format, isToday, isTomorrow, isPast, startOfDay } from 'date-fns';
@@ -93,11 +104,14 @@ interface SortableTaskProps {
   expandedTasks: Set<string>;
   getCompanyName: (companyId: string) => string;
   getCompanyColor: (companyId: string) => string;
+  getCategoryName?: (categoryId: string) => string;
+  getCategoryColor?: (categoryId: string) => string;
   tags: Tag[];
   viewMode: 'normal' | 'compact';
   isSelectionMode?: boolean;
   isSelected?: boolean;
   onTaskSelection?: (taskId: string, selected: boolean) => void;
+  isGroupedView?: boolean;
 }
 
 // Helper function to get date status
@@ -145,11 +159,14 @@ function SortableTask({
   expandedTasks,
   getCompanyName,
   getCompanyColor,
+  getCategoryName,
+  getCategoryColor,
   tags,
   viewMode,
   isSelectionMode = false,
   isSelected = false,
   onTaskSelection,
+  isGroupedView = false,
 }: SortableTaskProps) {
   const {
     attributes,
@@ -289,6 +306,29 @@ function SortableTask({
                     <StatusBadge status={task.status} />
                   )}
                   
+                  {/* Category Badge - Only for main tasks and not in grouped view */}
+                  {!isSubtask && !isGroupedView && task.categoryId && getCategoryName && getCategoryColor && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap"
+                            style={{ 
+                              backgroundColor: `${getCategoryColor(task.categoryId)}15`,
+                              color: getCategoryColor(task.categoryId),
+                              border: `1px solid ${getCategoryColor(task.categoryId)}30`
+                            }}
+                          >
+                            <Folder className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate max-w-[100px] sm:max-w-none">{getCategoryName(task.categoryId)}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-sm">Category: {getCategoryName(task.categoryId)}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  
                   {/* Recurring Indicator */}
                   {task.isRecurring && task.recurringPattern && (
                     <TooltipProvider>
@@ -410,6 +450,49 @@ function SortableTask({
             </TooltipProvider>
           )}
 
+          {!isSubtask && task.dueDate && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        const event = await CalendarService.createTaskEvent(task);
+                        if (event) {
+                          toast({
+                            title: "Calendar event created",
+                            description: `Event "${event.title}" has been added to your calendar.`,
+                          });
+                        } else {
+                          toast({
+                            title: "Calendar event failed",
+                            description: "Unable to create calendar event. Please check your calendar settings.",
+                            variant: "destructive",
+                          });
+                        }
+                      } catch (error) {
+                        toast({
+                          title: "Calendar event failed",
+                          description: "An error occurred while creating the calendar event.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    className="h-8 w-8 sm:h-8 sm:w-8 p-1.5 sm:p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 touch-action-manipulation"
+                  >
+                    <CalendarPlus className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Add to calendar</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -522,7 +605,9 @@ export function TaskList({
   const [showSmartLists, setShowSmartLists] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [sortBy, setSortBy] = useState<'manual' | 'dueDate' | 'priority' | 'company' | 'category' | 'createdAt'>('manual');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [addingSubtask, setAddingSubtask] = useState<string | null>(null);
   const [newSubtaskName, setNewSubtaskName] = useState('');
@@ -536,6 +621,9 @@ export function TaskList({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [showDataExport, setShowDataExport] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [sharingTask, setSharingTask] = useState<Task | null>(null);
+  const [groupByCategory, setGroupByCategory] = useState(false);
   const { toast } = useToast();
 
   // Comment management functions
@@ -586,6 +674,13 @@ export function TaskList({
     });
   };
 
+  // Share task function
+  const handleShareTask = (task: Task) => {
+    setSharingTask(task);
+    setShowShareDialog(true);
+  };
+
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -600,6 +695,14 @@ export function TaskList({
   const getCompanyColor = useCallback((companyId: string) => {
     return companies?.find(c => c.id === companyId)?.color || '#64748b';
   }, [companies]);
+
+  const getCategoryName = useCallback((categoryId: string) => {
+    return categories?.find(c => c.id === categoryId)?.name || 'Unknown Category';
+  }, [categories]);
+
+  const getCategoryColor = useCallback((categoryId: string) => {
+    return categories?.find(c => c.id === categoryId)?.color || '#64748b';
+  }, [categories]);
 
   const filteredAndSortedTasks = useMemo(() => {
     let filtered = tasks || [];
@@ -672,16 +775,54 @@ export function TaskList({
       filtered = filtered.filter(smartListFilter);
     }
 
-    // Sort by order if it exists, otherwise by date
+    // Enhanced sorting logic
     return [...filtered].sort((a, b) => {
-      if (a.order !== undefined && b.order !== undefined) {
-        return a.order - b.order;
-      }
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
-      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+      // Priority mapping for consistent ordering
+      const priorityOrder: Record<string, number> = {
+        high: 1,
+        medium: 2,
+        low: 3
+      };
+
+      const compareValue = (() => {
+        switch (sortBy) {
+          case 'manual':
+            if (a.order !== undefined && b.order !== undefined) {
+              return a.order - b.order;
+            }
+            return 0;
+          
+          case 'dueDate':
+            const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+            const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+            return dateA - dateB;
+          
+          case 'priority':
+            const priorityA = priorityOrder[a.priority || 'medium'] || 2;
+            const priorityB = priorityOrder[b.priority || 'medium'] || 2;
+            return priorityA - priorityB;
+          
+          case 'company':
+            const companyA = getCompanyName(a.companyId).toLowerCase();
+            const companyB = getCompanyName(b.companyId).toLowerCase();
+            return companyA.localeCompare(companyB);
+          
+          case 'category':
+            const categoryA = a.categoryId ? getCategoryName(a.categoryId).toLowerCase() : 'zzz';
+            const categoryB = b.categoryId ? getCategoryName(b.categoryId).toLowerCase() : 'zzz';
+            return categoryA.localeCompare(categoryB);
+          
+          case 'createdAt':
+          default:
+            const createdA = new Date(a.createdAt).getTime();
+            const createdB = new Date(b.createdAt).getTime();
+            return createdA - createdB;
+        }
+      })();
+
+      return sortOrder === 'asc' ? compareValue : -compareValue;
     });
-  }, [tasks, selectedCompany, selectedTags, searchQuery, sortOrder, showCompleted, companies, tags, getCompanyName, smartListFilter, selectedCategoryId]);
+  }, [tasks, selectedCompany, selectedTags, searchQuery, sortBy, sortOrder, showCompleted, companies, tags, getCompanyName, getCategoryName, smartListFilter, selectedCategoryId]);
 
   const handleSmartListFilter = (filterFn: (task: Task) => boolean, filterName: string) => {
     if (filterName === '') {
@@ -918,7 +1059,8 @@ export function TaskList({
         dueDate: newSubtaskDueDate ? new Date(newSubtaskDueDate) : undefined,
         dueTime: newSubtaskDueTime || undefined,
         tagIds: newSubtaskTags,
-        notes: newSubtaskNotes || undefined
+        notes: newSubtaskNotes || undefined,
+        categoryId: undefined // Subtasks should not have categories
       };
       
       const updatedTask = {
@@ -1034,7 +1176,7 @@ export function TaskList({
     }
   };
 
-  const renderTask = (task: Task, isSubtask: boolean = false) => (
+  const renderTask = (task: Task, isSubtask: boolean = false, isGroupedView: boolean = false) => (
     <SortableTask
       key={task.id}
       task={task}
@@ -1047,21 +1189,30 @@ export function TaskList({
       expandedTasks={expandedTasks}
       getCompanyName={getCompanyName}
       getCompanyColor={getCompanyColor}
+      getCategoryName={getCategoryName}
+      getCategoryColor={getCategoryColor}
       tags={tags}
       viewMode={viewMode}
       isSelectionMode={isSelectionMode}
       isSelected={selectedTasks.includes(task.id)}
       onTaskSelection={handleTaskSelection}
+      isGroupedView={isGroupedView}
     />
   );
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="pb-4">
+      <Card className="overflow-hidden">
+        <CardHeader className="pb-4 bg-gradient-to-r from-primary/5 via-transparent to-primary/5">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-            <CardTitle className="text-2xl font-semibold">Tasks</CardTitle>
+            <div>
+              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                Tasks
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">Manage and organize your work efficiently</p>
+            </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto">
+              {/* Primary Actions */}
               <Button
                 variant={showAddTask ? "default" : "outline"}
                 onClick={() => setShowAddTask(!showAddTask)}
@@ -1070,68 +1221,7 @@ export function TaskList({
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline">{showAddTask ? 'Cancel' : 'Add Task'}</span>
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowTemplates(true)}
-                className="flex items-center gap-2 touch-action-manipulation"
-              >
-                <Layers className="h-4 w-4" />
-                <span className="hidden sm:inline">Templates</span>
-                {templates.length > 0 && (
-                  <span className="bg-primary text-primary-foreground rounded-full text-xs px-1.5 py-0.5 min-w-[1.25rem] h-5 flex items-center justify-center">{templates.length}</span>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowCategoryManager(true)}
-                className="flex items-center gap-2 touch-action-manipulation"
-              >
-                <Folder className="h-4 w-4" />
-                <span className="hidden sm:inline">Categories</span>
-                {categories.length > 0 && (
-                  <span className="bg-primary text-primary-foreground rounded-full text-xs px-1.5 py-0.5 min-w-[1.25rem] h-5 flex items-center justify-center">{categories.length}</span>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowDataExport(true)}
-                className="flex items-center gap-2 touch-action-manipulation"
-              >
-                <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">Export</span>
-              </Button>
-              <Button
-                variant={showSmartLists ? "default" : "outline"}
-                onClick={() => setShowSmartLists(!showSmartLists)}
-                className="flex items-center gap-2 touch-action-manipulation"
-              >
-                <Zap className="h-4 w-4" />
-                <span className="hidden sm:inline">Smart Lists</span>
-                {activeSmartList && (
-                  <span className="bg-primary text-primary-foreground rounded-full w-2 h-2" />
-                )}
-              </Button>
-              <Button
-                variant={isSelectionMode ? "default" : "outline"}
-                onClick={toggleSelectionMode}
-                className="flex items-center gap-2 touch-action-manipulation"
-              >
-                <CheckSquare className="h-4 w-4" />
-                <span className="hidden sm:inline">{isSelectionMode ? 'Cancel' : 'Select'}</span>
-                {selectedTasks.length > 0 && (
-                  <span className="bg-primary text-primary-foreground rounded-full w-2 h-2" />
-                )}
-              </Button>
-              {isSelectionMode && (
-                <Button
-                  variant="outline"
-                  onClick={selectAllVisible}
-                  className="flex items-center gap-2 text-xs"
-                  size="sm"
-                >
-                  Select All ({filteredAndSortedTasks.length})
-                </Button>
-              )}
+              
               <Button
                 variant={showFilters ? "default" : "outline"}
                 onClick={() => setShowFilters(!showFilters)}
@@ -1140,43 +1230,138 @@ export function TaskList({
                 <Filter className="h-4 w-4" />
                 <span className="hidden sm:inline">Filters</span>
                 {(searchQuery || selectedCompany !== 'all' || selectedTags.length > 0 || selectedCategoryId) && (
-                  <span className="bg-primary text-primary-foreground rounded-full w-2 h-2" />
+                  <Badge variant="secondary" className="ml-1 h-5 w-5 rounded-full p-0">
+                    {((searchQuery ? 1 : 0) + 
+                      (selectedCompany !== 'all' ? 1 : 0) + 
+                      (selectedTags.length > 0 ? 1 : 0) + 
+                      (selectedCategoryId ? 1 : 0))}
+                  </Badge>
                 )}
               </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setViewMode(viewMode === 'normal' ? 'compact' : 'normal')}
-                className="flex items-center gap-2 hidden sm:flex"
-                title={`Switch to ${viewMode === 'normal' ? 'compact' : 'normal'} view`}
-              >
-                {viewMode === 'normal' ? (
-                  <>📋 Normal</>
-                ) : (
-                  <>📋 Compact</>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setShowCompleted(!showCompleted)}
-                className="flex items-center gap-2 touch-action-manipulation"
-                title={showCompleted ? "Hide completed tasks" : "Show completed tasks"}
-              >
-                {showCompleted ? (
-                  <Eye className="h-4 w-4" />
-                ) : (
-                  <EyeOff className="h-4 w-4" />
-                )}
-                <span className="hidden sm:inline">{showCompleted ? 'Hide Completed' : 'Show Completed'}</span>
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="flex items-center gap-2 hidden lg:flex"
-              >
-                <Calendar className="h-4 w-4" />
-                {sortOrder === 'asc' ? 'Oldest First' : 'Newest First'}
-                <ChevronDown className={`h-4 w-4 transition-transform ${sortOrder === 'desc' ? 'rotate-180' : ''}`} />
-              </Button>
+
+              {/* View Options */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant={groupByCategory ? "default" : "ghost"}
+                  onClick={() => setGroupByCategory(!groupByCategory)}
+                  size="icon"
+                  title="Group by category"
+                  className="h-9 w-9"
+                >
+                  <Layers className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setViewMode(viewMode === 'normal' ? 'compact' : 'normal')}
+                  size="icon"
+                  title={`Switch to ${viewMode === 'normal' ? 'compact' : 'normal'} view`}
+                  className="h-9 w-9"
+                >
+                  {viewMode === 'normal' ? (
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <rect x="4" y="4" width="16" height="4" strokeWidth="2" />
+                      <rect x="4" y="12" width="16" height="4" strokeWidth="2" />
+                      <rect x="4" y="20" width="16" height="4" strokeWidth="2" />
+                    </svg>
+                  ) : (
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <rect x="4" y="4" width="16" height="6" strokeWidth="2" />
+                      <rect x="4" y="14" width="16" height="6" strokeWidth="2" />
+                    </svg>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowCompleted(!showCompleted)}
+                  size="icon"
+                  title={showCompleted ? "Hide completed" : "Show completed"}
+                  className="h-9 w-9"
+                >
+                  {showCompleted ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                </Button>
+              </div>
+
+              {/* Sort Options */}
+              <Select value={`${sortBy}-${sortOrder}`} onValueChange={(value) => {
+                const [newSortBy, newSortOrder] = value.split('-') as [typeof sortBy, typeof sortOrder];
+                setSortBy(newSortBy);
+                setSortOrder(newSortOrder);
+              }}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Sort by..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="manual-asc">Manual Order</SelectItem>
+                  <SelectItem value="dueDate-asc">Due Date ↑</SelectItem>
+                  <SelectItem value="dueDate-desc">Due Date ↓</SelectItem>
+                  <SelectItem value="priority-asc">Priority ↑</SelectItem>
+                  <SelectItem value="priority-desc">Priority ↓</SelectItem>
+                  <SelectItem value="company-asc">Company A-Z</SelectItem>
+                  <SelectItem value="company-desc">Company Z-A</SelectItem>
+                  <SelectItem value="category-asc">Category A-Z</SelectItem>
+                  <SelectItem value="category-desc">Category Z-A</SelectItem>
+                  <SelectItem value="createdAt-desc">Newest First</SelectItem>
+                  <SelectItem value="createdAt-asc">Oldest First</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* More Options Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="1" strokeWidth="2" />
+                      <circle cx="12" cy="5" r="1" strokeWidth="2" />
+                      <circle cx="12" cy="19" r="1" strokeWidth="2" />
+                    </svg>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => setShowTemplates(true)} className="gap-2">
+                    <Layers className="h-4 w-4" />
+                    Templates
+                    {templates.length > 0 && (
+                      <Badge variant="secondary" className="ml-auto">{templates.length}</Badge>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowCategoryManager(true)} className="gap-2">
+                    <Folder className="h-4 w-4" />
+                    Categories
+                    {categories.length > 0 && (
+                      <Badge variant="secondary" className="ml-auto">{categories.length}</Badge>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowSmartLists(!showSmartLists)} className="gap-2">
+                    <Zap className="h-4 w-4" />
+                    Smart Lists
+                    {activeSmartList && <div className="ml-auto w-2 h-2 bg-primary rounded-full" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={toggleSelectionMode} className="gap-2">
+                    <CheckSquare className="h-4 w-4" />
+                    {isSelectionMode ? 'Cancel Selection' : 'Select Multiple'}
+                    {selectedTasks.length > 0 && (
+                      <Badge variant="secondary" className="ml-auto">{selectedTasks.length}</Badge>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setShowDataExport(true)} className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Export Data
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              {isSelectionMode && (
+                <Button
+                  variant="outline"
+                  onClick={selectAllVisible}
+                  className="text-xs"
+                  size="sm"
+                >
+                  Select All ({filteredAndSortedTasks.length})
+                </Button>
+              )}
             </div>
           </div>
           {showFilters && (
@@ -1306,44 +1491,71 @@ export function TaskList({
         <CardContent className="pt-6">
           <div className="space-y-4">
             {/* Always show quick stats summary */}
-            <Card className="bg-muted/30">
-              <CardContent className="p-4">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                  <div>
-                    <div className="text-2xl font-bold text-primary">
-                      {tasks.filter(t => !t.completed && !t.isArchived).length}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Active</p>
+                      <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                        {tasks.filter(t => !t.completed && !t.isArchived).length}
+                      </p>
                     </div>
-                    <div className="text-xs text-muted-foreground">Active Tasks</div>
+                    <Circle className="h-8 w-8 text-blue-600 dark:text-blue-400 opacity-50" />
                   </div>
-                  <div>
-                    <div className="text-2xl font-bold text-green-600">
-                      {tasks.filter(t => t.completed).length}
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-600 dark:text-green-400">Completed</p>
+                      <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+                        {tasks.filter(t => t.completed).length}
+                      </p>
                     </div>
-                    <div className="text-xs text-muted-foreground">Completed</div>
+                    <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400 opacity-50" />
                   </div>
-                  <div>
-                    <div className="text-2xl font-bold text-red-600">
-                      {tasks.filter(t => {
-                        if (!t.dueDate || t.completed) return false;
-                        const dueDate = typeof t.dueDate === 'string' ? new Date(t.dueDate) : t.dueDate;
-                        return isPast(startOfDay(dueDate)) && !isToday(dueDate);
-                      }).length}
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-red-600 dark:text-red-400">Overdue</p>
+                      <p className="text-2xl font-bold text-red-900 dark:text-red-100">
+                        {tasks.filter(t => {
+                          if (!t.dueDate || t.completed) return false;
+                          const dueDate = typeof t.dueDate === 'string' ? new Date(t.dueDate) : t.dueDate;
+                          return isPast(startOfDay(dueDate)) && !isToday(dueDate);
+                        }).length}
+                      </p>
                     </div>
-                    <div className="text-xs text-muted-foreground">Overdue</div>
+                    <Calendar className="h-8 w-8 text-red-600 dark:text-red-400 opacity-50" />
                   </div>
-                  <div>
-                    <div className="text-2xl font-bold text-orange-600">
-                      {tasks.filter(t => {
-                        if (!t.dueDate || t.completed) return false;
-                        const dueDate = typeof t.dueDate === 'string' ? new Date(t.dueDate) : t.dueDate;
-                        return isToday(dueDate);
-                      }).length}
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-amber-600 dark:text-amber-400">Due Today</p>
+                      <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">
+                        {tasks.filter(t => {
+                          if (!t.dueDate || t.completed) return false;
+                          const dueDate = typeof t.dueDate === 'string' ? new Date(t.dueDate) : t.dueDate;
+                          return isToday(dueDate);
+                        }).length}
+                      </p>
                     </div>
-                    <div className="text-xs text-muted-foreground">Due Today</div>
+                    <Calendar className="h-8 w-8 text-amber-600 dark:text-amber-400 opacity-50" />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
             
             {showSmartLists && (
               <SmartLists
@@ -1483,53 +1695,391 @@ export function TaskList({
                 </CardContent>
               </Card>
             )}
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={filteredAndSortedTasks.map(task => task.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {filteredAndSortedTasks.map((task) => (
-                  <div key={task.id}>
-                    {renderTask(task)}
-                    {!task.parentTaskId && expandedTasks.has(task.id) && task.subtasks && task.subtasks.length > 0 && (
-                      <div className="ml-4 sm:ml-8 space-y-2">
-                        <div className="subtask-list">
-                          <DndContext
-                            sensors={sensors}
-                            collisionDetection={closestCenter}
-                            onDragEnd={(event) => handleSubtaskDragEnd(task.id, event)}
+            {groupByCategory ? (
+              // Grouped by category view
+              <div className="space-y-6">
+                {/* Uncategorized tasks first */}
+                {filteredAndSortedTasks.filter(task => !task.categoryId).length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-3 h-3 border border-dashed border-gray-400 rounded-sm" />
+                      <Folder className="h-4 w-4 text-gray-400" />
+                      <h3 className="text-sm font-medium text-gray-600">Uncategorized</h3>
+                      <Badge variant="outline" className="text-xs h-5 px-1.5">
+                        {filteredAndSortedTasks.filter(task => !task.categoryId).length}
+                      </Badge>
+                    </div>
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext
+                        items={filteredAndSortedTasks.filter(task => !task.categoryId).map(task => task.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {filteredAndSortedTasks.filter(task => !task.categoryId).map((task) => (
+                          <div key={task.id}>
+                            {renderTask(task)}
+                            {!task.parentTaskId && expandedTasks.has(task.id) && task.subtasks && task.subtasks.length > 0 && (
+                              <div className="ml-4 sm:ml-8 space-y-2">
+                                <div className="subtask-list">
+                                  <DndContext
+                                    sensors={sensors}
+                                    collisionDetection={closestCenter}
+                                    onDragEnd={(event) => handleSubtaskDragEnd(task.id, event)}
+                                  >
+                                    <SortableContext
+                                      items={task.subtasks.map(subtask => subtask.id)}
+                                      strategy={verticalListSortingStrategy}
+                                    >
+                                      {task.subtasks.map(subtask => (
+                                        <SortableTask
+                                          key={subtask.id}
+                                          task={subtask}
+                                          isSubtask={true}
+                                          onToggleExpansion={toggleTaskExpansion}
+                                          onToggleCompletion={(subtask) => toggleSubtaskCompletion(task.id, subtask.id)}
+                                          onEdit={setEditingTask}
+                                          onDelete={(subtaskId) => handleDeleteSubtask(task.id, subtaskId)}
+                                          onAddSubtask={() => {}}
+                                          expandedTasks={expandedTasks}
+                                          getCompanyName={getCompanyName}
+                                          getCompanyColor={getCompanyColor}
+                                          getCategoryName={getCategoryName}
+                                          getCategoryColor={getCategoryColor}
+                                          tags={tags}
+                                          viewMode={viewMode}
+                                        />
+                                      ))}
+                                    </SortableContext>
+                                  </DndContext>
+                                </div>
+                              </div>
+                            )}
+                            {!task.parentTaskId && addingSubtask === task.id && (
+                              <div className="ml-4 sm:ml-8 mt-3">
+                                <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
+                                  <CardContent className="p-4">
+                                    <div className="space-y-3">
+                                      <Input
+                                        type="text"
+                                        value={newSubtaskName}
+                                        onChange={(e) => setNewSubtaskName(e.target.value)}
+                                        onKeyPress={(e) => {
+                                          if (e.key === 'Enter' && newSubtaskName.trim()) {
+                                            handleAddSubtask(task.id);
+                                          }
+                                        }}
+                                        placeholder="Add a subtask..."
+                                        className="h-9"
+                                        autoFocus
+                                      />
+                                      <div className="grid grid-cols-1 gap-3">
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                          <Input
+                                            type="date"
+                                            value={newSubtaskDueDate}
+                                            onChange={(e) => setNewSubtaskDueDate(e.target.value)}
+                                            placeholder="Due date (optional)"
+                                            className="h-9 w-full sm:flex-1"
+                                          />
+                                          <Input
+                                            type="time"
+                                            value={newSubtaskDueTime}
+                                            onChange={(e) => setNewSubtaskDueTime(e.target.value)}
+                                            placeholder="Time (optional)"
+                                            className="h-9 w-full sm:w-[120px]"
+                                          />
+                                          <Button
+                                            variant="default"
+                                            size="sm"
+                                            onClick={() => handleAddSubtask(task.id)}
+                                            disabled={!newSubtaskName.trim()}
+                                            className="gap-2"
+                                          >
+                                            <Plus className="h-4 w-4" />
+                                            Add
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                              setAddingSubtask(null);
+                                              setNewSubtaskName('');
+                                              setNewSubtaskDueDate('');
+                                              setNewSubtaskDueTime('');
+                                              setNewSubtaskTags([]);
+                                            }}
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                        <TagSelector
+                                          tags={tags}
+                                          selectedTagIds={newSubtaskTags}
+                                          onTagsChange={setNewSubtaskTags}
+                                          placeholder="Add tags to subtask..."
+                                        />
+                                        <Textarea
+                                          value={newSubtaskNotes}
+                                          onChange={(e) => setNewSubtaskNotes(e.target.value)}
+                                          placeholder="Add notes to subtask..."
+                                          className="shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                                          rows={2}
+                                        />
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </SortableContext>
+                    </DndContext>
+                  </div>
+                )}
+                
+                {/* Tasks grouped by category */}
+                {categories.map(category => {
+                  const categoryTasks = filteredAndSortedTasks.filter(task => task.categoryId === category.id);
+                  if (categoryTasks.length === 0) return null;
+                  
+                  const isCollapsed = collapsedCategories.has(category.id);
+                  
+                  return (
+                    <div key={category.id} className="space-y-2">
+                      <button
+                        onClick={() => {
+                          setCollapsedCategories(prev => {
+                            const next = new Set(prev);
+                            if (next.has(category.id)) {
+                              next.delete(category.id);
+                            } else {
+                              next.add(category.id);
+                            }
+                            return next;
+                          });
+                        }}
+                        className="flex items-center gap-2 mb-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg p-2 -ml-2 transition-colors"
+                      >
+                        <button className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
+                          {isCollapsed ? (
+                            <ChevronRight className="h-4 w-4 text-gray-500" />
+                          ) : (
+                            <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+                          )}
+                        </button>
+                        <div 
+                          className="w-3 h-3 rounded-sm flex-shrink-0" 
+                          style={{ backgroundColor: category.color }}
+                        />
+                        <Folder className="h-4 w-4 flex-shrink-0" style={{ color: category.color }} />
+                        <h3 className="text-sm font-medium flex-1 text-left" style={{ color: category.color }}>
+                          {category.name}
+                        </h3>
+                        <Badge variant="outline" className="text-xs h-5 px-1.5">
+                          {categoryTasks.length}
+                        </Badge>
+                        {category.description && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div onClick={(e) => e.stopPropagation()}>
+                                  <Info className="h-3 w-3 text-muted-foreground" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-sm">{category.description}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </button>
+                      {!isCollapsed && (
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={handleDragEnd}
+                        >
+                          <SortableContext
+                            items={categoryTasks.map(task => task.id)}
+                            strategy={verticalListSortingStrategy}
                           >
-                            <SortableContext
-                              items={task.subtasks.map(subtask => subtask.id)}
-                              strategy={verticalListSortingStrategy}
+                          {categoryTasks.map((task) => (
+                            <div key={task.id}>
+                              {renderTask(task, false, true)}
+                              {!task.parentTaskId && expandedTasks.has(task.id) && task.subtasks && task.subtasks.length > 0 && (
+                                <div className="ml-4 sm:ml-8 space-y-2">
+                                  <div className="subtask-list">
+                                    <DndContext
+                                      sensors={sensors}
+                                      collisionDetection={closestCenter}
+                                      onDragEnd={(event) => handleSubtaskDragEnd(task.id, event)}
+                                    >
+                                      <SortableContext
+                                        items={task.subtasks.map(subtask => subtask.id)}
+                                        strategy={verticalListSortingStrategy}
+                                      >
+                                        {task.subtasks.map(subtask => (
+                                          <SortableTask
+                                            key={subtask.id}
+                                            task={subtask}
+                                            isSubtask={true}
+                                            onToggleExpansion={toggleTaskExpansion}
+                                            onToggleCompletion={(subtask) => toggleSubtaskCompletion(task.id, subtask.id)}
+                                            onEdit={setEditingTask}
+                                            onDelete={(subtaskId) => handleDeleteSubtask(task.id, subtaskId)}
+                                            onAddSubtask={() => {}}
+                                            expandedTasks={expandedTasks}
+                                            getCompanyName={getCompanyName}
+                                            getCompanyColor={getCompanyColor}
+                                            tags={tags}
+                                            viewMode={viewMode}
+                                            isGroupedView={true}
+                                          />
+                                        ))}
+                                      </SortableContext>
+                                    </DndContext>
+                                  </div>
+                                </div>
+                              )}
+                              {!task.parentTaskId && addingSubtask === task.id && (
+                                <div className="ml-4 sm:ml-8 mt-3">
+                                  <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
+                                    <CardContent className="p-4">
+                                      <div className="space-y-3">
+                                        <Input
+                                          type="text"
+                                          value={newSubtaskName}
+                                          onChange={(e) => setNewSubtaskName(e.target.value)}
+                                          onKeyPress={(e) => {
+                                            if (e.key === 'Enter' && newSubtaskName.trim()) {
+                                              handleAddSubtask(task.id);
+                                            }
+                                          }}
+                                          placeholder="Add a subtask..."
+                                          className="h-9"
+                                          autoFocus
+                                        />
+                                        <div className="grid grid-cols-1 gap-3">
+                                          <div className="flex flex-col sm:flex-row gap-2">
+                                            <Input
+                                              type="date"
+                                              value={newSubtaskDueDate}
+                                              onChange={(e) => setNewSubtaskDueDate(e.target.value)}
+                                              placeholder="Due date (optional)"
+                                              className="h-9 w-full sm:flex-1"
+                                            />
+                                            <Input
+                                              type="time"
+                                              value={newSubtaskDueTime}
+                                              onChange={(e) => setNewSubtaskDueTime(e.target.value)}
+                                              placeholder="Time (optional)"
+                                              className="h-9 w-full sm:w-[120px]"
+                                            />
+                                            <Button
+                                              variant="default"
+                                              size="sm"
+                                              onClick={() => handleAddSubtask(task.id)}
+                                              disabled={!newSubtaskName.trim()}
+                                              className="gap-2"
+                                            >
+                                              <Plus className="h-4 w-4" />
+                                              Add
+                                            </Button>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => {
+                                                setAddingSubtask(null);
+                                                setNewSubtaskName('');
+                                                setNewSubtaskDueDate('');
+                                                setNewSubtaskDueTime('');
+                                                setNewSubtaskTags([]);
+                                              }}
+                                            >
+                                              Cancel
+                                            </Button>
+                                          </div>
+                                          <TagSelector
+                                            tags={tags}
+                                            selectedTagIds={newSubtaskTags}
+                                            onTagsChange={setNewSubtaskTags}
+                                            placeholder="Add tags to subtask..."
+                                          />
+                                          <Textarea
+                                            value={newSubtaskNotes}
+                                            onChange={(e) => setNewSubtaskNotes(e.target.value)}
+                                            placeholder="Add notes to subtask..."
+                                            className="shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-400"
+                                            rows={2}
+                                          />
+                                        </div>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                          </SortableContext>
+                        </DndContext>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              // Normal ungrouped view
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={filteredAndSortedTasks.map(task => task.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {filteredAndSortedTasks.map((task) => (
+                    <div key={task.id}>
+                      {renderTask(task)}
+                      {!task.parentTaskId && expandedTasks.has(task.id) && task.subtasks && task.subtasks.length > 0 && (
+                        <div className="ml-4 sm:ml-8 space-y-2">
+                          <div className="subtask-list">
+                            <DndContext
+                              sensors={sensors}
+                              collisionDetection={closestCenter}
+                              onDragEnd={(event) => handleSubtaskDragEnd(task.id, event)}
                             >
-                              {task.subtasks.map(subtask => (
-                                <SortableTask
-                                  key={subtask.id}
-                                  task={subtask}
-                                  isSubtask={true}
-                                  onToggleExpansion={toggleTaskExpansion}
-                                  onToggleCompletion={(subtask) => toggleSubtaskCompletion(task.id, subtask.id)}
-                                  onEdit={setEditingTask}
-                                  onDelete={(subtaskId) => handleDeleteSubtask(task.id, subtaskId)}
-                                  onAddSubtask={() => {}}
-                                  expandedTasks={expandedTasks}
-                                  getCompanyName={getCompanyName}
-                                  getCompanyColor={getCompanyColor}
-                                  tags={tags}
-                                  viewMode={viewMode}
-                                />
-                              ))}
-                            </SortableContext>
-                          </DndContext>
+                              <SortableContext
+                                items={task.subtasks.map(subtask => subtask.id)}
+                                strategy={verticalListSortingStrategy}
+                              >
+                                {task.subtasks.map(subtask => (
+                                  <SortableTask
+                                    key={subtask.id}
+                                    task={subtask}
+                                    isSubtask={true}
+                                    onToggleExpansion={toggleTaskExpansion}
+                                    onToggleCompletion={(subtask) => toggleSubtaskCompletion(task.id, subtask.id)}
+                                    onEdit={setEditingTask}
+                                    onDelete={(subtaskId) => handleDeleteSubtask(task.id, subtaskId)}
+                                    onAddSubtask={() => {}}
+                                    expandedTasks={expandedTasks}
+                                    getCompanyName={getCompanyName}
+                                    getCompanyColor={getCompanyColor}
+                                    tags={tags}
+                                    viewMode={viewMode}
+                                  />
+                                ))}
+                              </SortableContext>
+                            </DndContext>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    {!task.parentTaskId && addingSubtask === task.id && (
+                      )}
+                      {!task.parentTaskId && addingSubtask === task.id && (
                       <div className="ml-4 sm:ml-8 mt-3">
                         <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
                           <CardContent className="p-4">
@@ -1610,6 +2160,7 @@ export function TaskList({
                 ))}
               </SortableContext>
             </DndContext>
+            )}
             
             {filteredAndSortedTasks.length === 0 && (
               <EmptyState
@@ -1627,24 +2178,33 @@ export function TaskList({
       </Card>
 
       <Dialog open={!!editingTask} onOpenChange={() => { setEditingTask(null); setActiveTab('details'); }}>
-        <DialogContent className="w-[95vw] max-w-[600px] sm:w-full max-h-[90vh] overflow-hidden">
-          <DialogHeader>
+        <DialogContent className="w-[95vw] max-w-[600px] sm:w-full max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Edit {editingTask?.parentTaskId ? 'Subtask' : 'Task'}</DialogTitle>
           </DialogHeader>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="comments" className="relative">
-                Comments
-                {editingTask?.comments && editingTask.comments.length > 0 && (
-                  <span className="ml-1 bg-primary text-primary-foreground rounded-full text-xs px-1.5 py-0.5 min-w-[1.25rem] h-5 flex items-center justify-center">
-                    {editingTask.comments.length}
-                  </span>
-                )}
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="details" className="flex-1 overflow-y-auto">
-              <div className="py-4 space-y-4">
+          <div className="flex-1 overflow-hidden">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+              <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="comments" className="relative">
+                  Comments
+                  {editingTask?.comments && editingTask.comments.length > 0 && (
+                    <span className="ml-1 bg-primary text-primary-foreground rounded-full text-xs px-1.5 py-0.5 min-w-[1.25rem] h-5 flex items-center justify-center">
+                      {editingTask.comments.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="assignment">
+                  <UserPlus className="h-3 w-3 mr-1" />
+                  Assignment
+                </TabsTrigger>
+                <TabsTrigger value="sharing">
+                  <Share2 className="h-3 w-3 mr-1" />
+                  Share
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="details" className="flex-1 overflow-y-auto mt-4">
+                <div className="space-y-4 pr-2">
             <Input
               value={editingTask?.name || ''}
               onChange={(e) => setEditingTask(prev => prev ? { ...prev, name: e.target.value } : null)}
@@ -1862,23 +2422,55 @@ export function TaskList({
             </>
               </div>
             </TabsContent>
-            <TabsContent value="comments" className="flex-1 overflow-y-auto">
-              <div className="py-4">
-                {editingTask && (
-                  <TaskComments
-                    taskId={editingTask.id}
-                    comments={editingTask.comments || []}
-                    onCommentAdd={(comment) => handleCommentAdd(editingTask.id, comment)}
-                    onCommentUpdate={(commentId, updates) => handleCommentUpdate(editingTask.id, commentId, updates)}
-                    onCommentDelete={(commentId) => handleCommentDelete(editingTask.id, commentId)}
-                    currentUserId="current-user" // In a real app, get from auth context
-                    currentUserName="Current User" // In a real app, get from auth context
-                  />
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
-          <DialogFooter>
+              <TabsContent value="comments" className="flex-1 overflow-y-auto mt-4">
+                <div className="pr-2">
+                  {editingTask && (
+                    <TaskComments
+                      taskId={editingTask.id}
+                      comments={editingTask.comments || []}
+                      onCommentAdd={(comment) => handleCommentAdd(editingTask.id, comment)}
+                      onCommentUpdate={(commentId, updates) => handleCommentUpdate(editingTask.id, commentId, updates)}
+                      onCommentDelete={(commentId) => handleCommentDelete(editingTask.id, commentId)}
+                      currentUserId="current-user" // In a real app, get from auth context
+                      currentUserName="Current User" // In a real app, get from auth context
+                    />
+                  )}
+                </div>
+              </TabsContent>
+              <TabsContent value="assignment" className="flex-1 overflow-y-auto mt-4">
+                <div className="pr-2">
+                  {editingTask && (
+                    <TaskAssignment
+                      task={editingTask}
+                      onTaskUpdate={onTaskUpdate}
+                      disabled={editingTask.parentTaskId ? true : false} // Disable for subtasks
+                    />
+                  )}
+                </div>
+              </TabsContent>
+              <TabsContent value="sharing" className="flex-1 overflow-y-auto mt-4">
+                <div className="pr-2">
+                  {editingTask && (
+                    <div className="space-y-4">
+                      <div className="text-center">
+                        <Button
+                          onClick={() => handleShareTask(editingTask)}
+                          className="gap-2"
+                        >
+                          <Share2 className="h-4 w-4" />
+                          Open Share Options
+                        </Button>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Generate share links and invite collaborators
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+          <DialogFooter className="flex-shrink-0 mt-4">
             <Button 
               variant="outline" 
               onClick={() => setEditingTask(null)}
@@ -1954,6 +2546,17 @@ export function TaskList({
           tags={tags}
           categories={categories}
           onClose={() => setShowDataExport(false)}
+        />
+      )}
+      
+      {showShareDialog && sharingTask && (
+        <ShareDialog
+          isOpen={showShareDialog}
+          onClose={() => {
+            setShowShareDialog(false);
+            setSharingTask(null);
+          }}
+          task={sharingTask}
         />
       )}
     </div>

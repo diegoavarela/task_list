@@ -17,13 +17,14 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-export const authenticateToken = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const authenticateToken = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     if (!token) {
-      return res.status(401).json({ error: 'Access token required' });
+      res.status(401).json({ error: 'Access token required' });
+      return;
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
@@ -32,18 +33,20 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
 
     next();
   } catch (error) {
-    return res.status(403).json({ error: 'Invalid or expired token' });
+    res.status(403).json({ error: 'Invalid or expired token' });
   }
 };
 
 export const requireRole = (roles: string[]) => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      return res.status(401).json({ error: 'Authentication required' });
+      res.status(401).json({ error: 'Authentication required' });
+      return;
     }
 
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
     }
 
     next();
@@ -51,24 +54,27 @@ export const requireRole = (roles: string[]) => {
 };
 
 export const requireSubscription = (requiredTiers: string[]) => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (!req.tenant) {
-      return res.status(401).json({ error: 'Tenant context required' });
+      res.status(401).json({ error: 'Tenant context required' });
+      return;
     }
 
     if (!requiredTiers.includes(req.tenant.subscriptionTier)) {
-      return res.status(403).json({ 
+      res.status(403).json({ 
         error: 'Subscription upgrade required',
         requiredTier: requiredTiers,
         currentTier: req.tenant.subscriptionTier
       });
+      return;
     }
 
     if (req.tenant.subscriptionStatus !== 'active') {
-      return res.status(403).json({ 
+      res.status(403).json({ 
         error: 'Subscription is not active',
         status: req.tenant.subscriptionStatus
       });
+      return;
     }
 
     next();

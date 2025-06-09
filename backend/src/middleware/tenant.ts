@@ -4,7 +4,7 @@ import { tenants, users } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { AuthenticatedRequest } from './auth';
 
-export const injectTenantContext = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const injectTenantContext = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     // Extract tenant information from the request
     let tenantId = req.user?.tenantId;
@@ -21,7 +21,8 @@ export const injectTenantContext = async (req: AuthenticatedRequest, res: Respon
     }
 
     if (!tenantId) {
-      return res.status(400).json({ error: 'Tenant context required' });
+      res.status(400).json({ error: 'Tenant context required' });
+      return;
     }
 
     // Verify tenant exists and is active
@@ -33,7 +34,8 @@ export const injectTenantContext = async (req: AuthenticatedRequest, res: Respon
     ).limit(1);
 
     if (tenant.length === 0) {
-      return res.status(404).json({ error: 'Tenant not found or inactive' });
+      res.status(404).json({ error: 'Tenant not found or inactive' });
+      return;
     }
 
     req.tenant = {
@@ -46,14 +48,15 @@ export const injectTenantContext = async (req: AuthenticatedRequest, res: Respon
     next();
   } catch (error) {
     console.error('Tenant context injection error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-export const validateTenantAccess = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const validateTenantAccess = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     if (!req.user || !req.tenant) {
-      return res.status(401).json({ error: 'Authentication and tenant context required' });
+      res.status(401).json({ error: 'Authentication and tenant context required' });
+      return;
     }
 
     // Verify user belongs to the tenant
@@ -66,12 +69,13 @@ export const validateTenantAccess = async (req: AuthenticatedRequest, res: Respo
     ).limit(1);
 
     if (userInTenant.length === 0) {
-      return res.status(403).json({ error: 'User does not have access to this tenant' });
+      res.status(403).json({ error: 'User does not have access to this tenant' });
+      return;
     }
 
     next();
   } catch (error) {
     console.error('Tenant access validation error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 };

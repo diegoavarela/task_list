@@ -16,7 +16,8 @@ router.get('/current', injectTenantContext, validateTenantAccess, async (req: an
     const tenant = await db.select().from(tenants).where(eq(tenants.id, req.tenant!.id)).limit(1);
     
     if (tenant.length === 0) {
-      return res.status(404).json({ error: 'Tenant not found' });
+      res.status(404).json({ error: 'Tenant not found' });
+      return;
     }
 
     res.json(tenant[0]);
@@ -32,7 +33,8 @@ router.put('/current', injectTenantContext, validateTenantAccess, requireRole(['
     const { name, domain, settings } = req.body;
 
     if (!name || !name.trim()) {
-      return res.status(400).json({ error: 'Tenant name is required' });
+      res.status(400).json({ error: 'Tenant name is required' });
+      return;
     }
 
     const updatedTenant = await db.update(tenants)
@@ -121,7 +123,8 @@ router.post('/members/invite', injectTenantContext, validateTenantAccess, requir
     const { email, role = 'member' } = req.body;
 
     if (!email || !email.trim()) {
-      return res.status(400).json({ error: 'Email is required' });
+      res.status(400).json({ error: 'Email is required' });
+      return;
     }
 
     // Check if user already exists in tenant
@@ -133,7 +136,8 @@ router.post('/members/invite', injectTenantContext, validateTenantAccess, requir
     ).limit(1);
 
     if (existingUser.length > 0) {
-      return res.status(409).json({ error: 'User already exists in this tenant' });
+      res.status(409).json({ error: 'User already exists in this tenant' });
+      return;
     }
 
     // Check subscription limits
@@ -146,11 +150,12 @@ router.post('/members/invite', injectTenantContext, validateTenantAccess, requir
 
     const limits = getSubscriptionLimits(req.tenant!.subscriptionTier);
     if (parseInt(userCount[0].count as string) >= limits.users) {
-      return res.status(403).json({ 
+      res.status(403).json({ 
         error: 'User limit reached for current subscription',
         currentUsers: parseInt(userCount[0].count as string),
         limit: limits.users
       });
+      return;
     }
 
     // TODO: Send invitation email
@@ -174,7 +179,8 @@ router.put('/members/:userId', injectTenantContext, validateTenantAccess, requir
     // Validate role
     const validRoles = ['owner', 'admin', 'manager', 'member'];
     if (role && !validRoles.includes(role)) {
-      return res.status(400).json({ error: 'Invalid role' });
+      res.status(400).json({ error: 'Invalid role' });
+      return;
     }
 
     // Check if user exists in tenant
@@ -186,7 +192,8 @@ router.put('/members/:userId', injectTenantContext, validateTenantAccess, requir
     ).limit(1);
 
     if (existingUser.length === 0) {
-      return res.status(404).json({ error: 'User not found in this tenant' });
+      res.status(404).json({ error: 'User not found in this tenant' });
+      return;
     }
 
     // Prevent removing the last owner
@@ -200,7 +207,8 @@ router.put('/members/:userId', injectTenantContext, validateTenantAccess, requir
       );
 
       if (parseInt(ownerCount[0].count as string) <= 1) {
-        return res.status(400).json({ error: 'Cannot remove the last owner' });
+        res.status(400).json({ error: 'Cannot remove the last owner' });
+        return;
       }
     }
 

@@ -27,7 +27,8 @@ router.get('/me', async (req: any, res: Response) => {
     }).from(users).where(eq(users.id, req.user!.id)).limit(1);
 
     if (user.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'User not found' });
+      return;
     }
 
     res.json(user[0]);

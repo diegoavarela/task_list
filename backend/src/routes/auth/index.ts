@@ -11,12 +11,13 @@ const router = express.Router();
 router.use(authLimiter);
 
 // POST /api/auth/login - Login with Clerk user ID
-router.post('/login', async (req: Request, res: Response): Promise<Response | void> => {
+router.post('/login', async (req: Request, res: Response): Promise<void> => {
   try {
     const { clerkUserId, tenantSlug } = req.body;
 
     if (!clerkUserId) {
-      return res.status(400).json({ error: 'Clerk user ID is required' });
+      res.status(400).json({ error: 'Clerk user ID is required' });
+      return;
     }
 
     // Find user
@@ -25,7 +26,8 @@ router.post('/login', async (req: Request, res: Response): Promise<Response | vo
       // Find user by tenant slug
       const tenant = await db.select().from(tenants).where(eq(tenants.slug, tenantSlug)).limit(1);
       if (tenant.length === 0) {
-        return res.status(404).json({ error: 'Tenant not found' });
+        res.status(404).json({ error: 'Tenant not found' });
+        return;
       }
 
       const userResult = await db.select().from(users).where(
@@ -37,7 +39,8 @@ router.post('/login', async (req: Request, res: Response): Promise<Response | vo
       ).limit(1);
 
       if (userResult.length === 0) {
-        return res.status(404).json({ error: 'User not found in this tenant' });
+        res.status(404).json({ error: 'User not found in this tenant' });
+        return;
       }
 
       user = { ...userResult[0], tenant: tenant[0] };
@@ -51,12 +54,14 @@ router.post('/login', async (req: Request, res: Response): Promise<Response | vo
       ).limit(1);
 
       if (userResult.length === 0) {
-        return res.status(404).json({ error: 'User not found' });
+        res.status(404).json({ error: 'User not found' });
+        return;
       }
 
       const tenant = await db.select().from(tenants).where(eq(tenants.id, userResult[0].tenantId)).limit(1);
       if (tenant.length === 0) {
-        return res.status(404).json({ error: 'User tenant not found' });
+        res.status(404).json({ error: 'User tenant not found' });
+        return;
       }
 
       user = { ...userResult[0], tenant: tenant[0] };
@@ -113,7 +118,7 @@ router.post('/login', async (req: Request, res: Response): Promise<Response | vo
 });
 
 // POST /api/auth/register - Register new user (typically called after Clerk signup)
-router.post('/register', async (req: Request, res: Response): Promise<Response | void> => {
+router.post('/register', async (req: Request, res: Response): Promise<void> => {
   try {
     const {
       clerkUserId,
@@ -126,21 +131,24 @@ router.post('/register', async (req: Request, res: Response): Promise<Response |
     } = req.body;
 
     if (!clerkUserId || !email || !tenantName || !tenantSlug) {
-      return res.status(400).json({ 
+      res.status(400).json({ 
         error: 'Clerk user ID, email, tenant name, and tenant slug are required' 
       });
+      return;
     }
 
     // Check if user already exists
     const existingUser = await db.select().from(users).where(eq(users.clerkUserId, clerkUserId)).limit(1);
     if (existingUser.length > 0) {
-      return res.status(409).json({ error: 'User already exists' });
+      res.status(409).json({ error: 'User already exists' });
+      return;
     }
 
     // Check if tenant slug is available
     const existingTenant = await db.select().from(tenants).where(eq(tenants.slug, tenantSlug)).limit(1);
     if (existingTenant.length > 0) {
-      return res.status(409).json({ error: 'Tenant slug already taken' });
+      res.status(409).json({ error: 'Tenant slug already taken' });
+      return;
     }
 
     // Create tenant
@@ -207,12 +215,13 @@ router.post('/register', async (req: Request, res: Response): Promise<Response |
 });
 
 // POST /api/auth/verify - Verify token
-router.post('/verify', async (req: Request, res: Response): Promise<Response | void> => {
+router.post('/verify', async (req: Request, res: Response): Promise<void> => {
   try {
     const { token } = req.body;
 
     if (!token) {
-      return res.status(400).json({ error: 'Token is required' });
+      res.status(400).json({ error: 'Token is required' });
+      return;
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
@@ -226,7 +235,8 @@ router.post('/verify', async (req: Request, res: Response): Promise<Response | v
     ).limit(1);
 
     if (user.length === 0) {
-      return res.status(401).json({ error: 'User not found or inactive' });
+      res.status(401).json({ error: 'User not found or inactive' });
+      return;
     }
 
     // Verify tenant still exists and is active
@@ -238,7 +248,8 @@ router.post('/verify', async (req: Request, res: Response): Promise<Response | v
     ).limit(1);
 
     if (tenant.length === 0) {
-      return res.status(401).json({ error: 'Tenant not found or inactive' });
+      res.status(401).json({ error: 'Tenant not found or inactive' });
+      return;
     }
 
     res.json({

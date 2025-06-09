@@ -1,10 +1,12 @@
-import { Save, CheckSquare, Building2, Download, FileJson, FileSpreadsheet, Hash, Menu, X, Calendar, BarChart } from 'lucide-react';
+import { Save, CheckSquare, Building2, Download, FileJson, FileSpreadsheet, Hash, Menu, X, Calendar, BarChart, CreditCard } from 'lucide-react';
 import { Footer } from './Footer';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
+import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import { NotificationSettings } from '@/components/notifications/NotificationSettings';
 import {
   Tooltip,
   TooltipContent,
@@ -17,15 +19,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { format } from 'date-fns';
 import type { Task } from '@/types/task';
 import type { Company } from '@/types/company';
+import type { Notification } from '@/types/notification';
 import type { ReactNode } from 'react';
 
 interface LayoutProps {
   children: ReactNode;
-  currentPage: 'tasks' | 'companies' | 'tags' | 'calendar' | 'analytics';
-  onPageChange: (page: 'tasks' | 'companies' | 'tags' | 'calendar' | 'analytics') => void;
+  currentPage: 'tasks' | 'companies' | 'tags' | 'calendar' | 'analytics' | 'billing';
+  onPageChange: (page: 'tasks' | 'companies' | 'tags' | 'calendar' | 'analytics' | 'billing') => void;
   onSave?: () => void;
   saveError?: string | null;
   tasks?: Task[];
@@ -147,6 +156,7 @@ export function Layout({
   lastSaved 
 }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -240,10 +250,37 @@ export function Layout({
                 <BarChart className="h-4 w-4" />
                 Analytics
               </button>
+              <button
+                onClick={() => onPageChange('billing')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  currentPage === 'billing' 
+                    ? 'bg-background text-foreground shadow-sm' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                }`}
+              >
+                <CreditCard className="h-4 w-4" />
+                Billing
+              </button>
             </nav>
 
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <NotificationCenter 
+                        userId="current-user"
+                        onSettingsClick={() => setShowNotificationSettings(true)}
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Notifications</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -411,6 +448,20 @@ export function Layout({
                   <BarChart className="h-4 w-4" />
                   Analytics
                 </button>
+                <button
+                  onClick={() => {
+                    onPageChange('billing');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    currentPage === 'billing' 
+                      ? 'bg-slate-100 text-slate-900 border border-slate-200/50' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Billing
+                </button>
               </nav>
               <div className="flex items-center justify-between pt-2 border-t border-slate-200/50">
                 <div className="flex items-center gap-2">
@@ -451,6 +502,19 @@ export function Layout({
         {children}
       </main>
       <Footer />
+      
+      {/* Notification Settings Dialog */}
+      <Dialog open={showNotificationSettings} onOpenChange={setShowNotificationSettings}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Notification Settings</DialogTitle>
+          </DialogHeader>
+          <NotificationSettings 
+            userId="current-user"
+            onClose={() => setShowNotificationSettings(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 
